@@ -1317,22 +1317,24 @@ class TestNetworkTasks(base.TestCase):
         mock_get_net_driver.return_value = mock_driver
         net = network_tasks.AllocateVIP()
 
-        mock_driver.allocate_vip.return_value = LB.vip
+        mock_driver.allocate_vip.return_value = LB.vip, []
 
         mock_driver.reset_mock()
-        self.assertEqual(LB.vip, net.execute(LB))
+        self.assertEqual((LB.vip, []), net.execute(LB))
         mock_driver.allocate_vip.assert_called_once_with(LB)
 
         # revert
         vip_mock = mock.MagicMock()
-        net.revert(vip_mock, LB)
+        additional_vips_mock = mock.MagicMock()
+        net.revert((vip_mock, additional_vips_mock), LB)
         mock_driver.deallocate_vip.assert_called_once_with(vip_mock)
 
         # revert exception
         mock_driver.reset_mock()
+        vip_mock.reset_mock()
+        additional_vips_mock.reset_mock()
         mock_driver.deallocate_vip.side_effect = Exception('DeallVipException')
-        vip_mock = mock.MagicMock()
-        net.revert(vip_mock, LB)
+        net.revert((vip_mock, additional_vips_mock), LB)
         mock_driver.deallocate_vip.assert_called_once_with(vip_mock)
 
     def test_allocate_vip_for_failover(self, mock_get_net_driver):
@@ -1340,10 +1342,10 @@ class TestNetworkTasks(base.TestCase):
         mock_get_net_driver.return_value = mock_driver
         net = network_tasks.AllocateVIPforFailover()
 
-        mock_driver.allocate_vip.return_value = LB.vip
+        mock_driver.allocate_vip.return_value = LB.vip, []
 
         mock_driver.reset_mock()
-        self.assertEqual(LB.vip, net.execute(LB))
+        self.assertEqual((LB.vip, []), net.execute(LB))
         mock_driver.allocate_vip.assert_called_once_with(LB)
 
         # revert

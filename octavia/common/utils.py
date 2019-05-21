@@ -71,6 +71,11 @@ def get_network_driver():
     return network_driver
 
 
+def ip_version(ip_address):
+    ip = netaddr.IPAddress(ip_address)
+    return ip.version
+
+
 def is_ipv4(ip_address):
     """Check if ip address is IPv4 address."""
     ip = netaddr.IPAddress(ip_address)

@@ -103,79 +103,88 @@ class InterfaceFile(object):
 
 
 class VIPInterfaceFile(InterfaceFile):
-    def __init__(self, name, mtu,
-                 vip, ip_version, prefixlen,
-                 gateway, vrrp_ip, host_routes,
-                 topology, fixed_ips=None):
+    def __init__(self, name, mtu, vips, vrrp_info, fixed_ips, topology):
 
         super().__init__(name, mtu=mtu)
 
-        if vrrp_ip:
+        has_ipv4 = [True for vip in vips if vip['ip_version'] == 4]
+        has_ipv6 = [True for vip in vips if vip['ip_version'] == 6]
+        if vrrp_info:
             self.addresses.append({
-                consts.ADDRESS: vrrp_ip,
-                consts.PREFIXLEN: prefixlen
+                consts.ADDRESS: vrrp_info['ip'],
+                consts.PREFIXLEN: vrrp_info['prefixlen']
             })
         else:
-            key = consts.DHCP if ip_version == 4 else consts.IPV6AUTO
-            self.addresses.append({
-                key: True
-            })
+            if has_ipv4:
+                self.addresses.append({
+                    consts.DHCP: True
+                })
+            if has_ipv6:
+                self.addresses.append({
+                    consts.IPV6AUTO: True
+                })
 
-        if gateway:
-            # Add default routes if there's a gateway
-            self.routes.append({
-                consts.DST: (
-                    "::/0" if ip_version == 6 else "0.0.0.0/0"),
-                consts.GATEWAY: gateway,
-                consts.FLAGS: [consts.ONLINK]
+        ip_versions = set()
+
+        for vip in vips:
+            gateway = vip.get('gateway')
+            ip_version = vip.get('ip_version')
+            ip_versions.add(ip_version)
+
+            if gateway:
+                # Add default routes if there's a gateway
+                self.routes.append({
+                    consts.DST: (
+                        "::/0" if ip_version == 6 else "0.0.0.0/0"),
+                    consts.GATEWAY: gateway,
+                    consts.FLAGS: [consts.ONLINK]
+                })
+                self.routes.append({
+                    consts.DST: (
+                        "::/0" if ip_version == 6 else "0.0.0.0/0"),
+                    consts.GATEWAY: gateway,
+                    consts.FLAGS: [consts.ONLINK],
+                    consts.TABLE: 1,
+                })
+
+            # In ACTIVE_STANDBY topology, keepalived sets some addresses,
+            # routes and rules.
+            # Keep track of those resources in the interface file but mark them
+            # with a special flag so the amphora-interface would not add/delete
+            # keepalived-maintained things.
+            ignore = topology == consts.TOPOLOGY_ACTIVE_STANDBY
+
+            prefixlen = vip['prefixlen']
+            if ignore:
+                # Keepalived sets this prefixlen for the addresses it maintains
+                vip_prefixlen = 32 if ip_version == 4 else 128
+            else:
+                vip_prefixlen = prefixlen
+
+            self.addresses.append({
+                consts.ADDRESS: vip['ip_address'],
+                consts.PREFIXLEN: vip_prefixlen,
+                consts.IGNORE: ignore
             })
+            vip_cidr = ipaddress.ip_network(
+                "{}/{}".format(vip['ip_address'], prefixlen), strict=False)
             self.routes.append({
-                consts.DST: (
-                    "::/0" if ip_version == 6 else "0.0.0.0/0"),
-                consts.GATEWAY: gateway,
-                consts.FLAGS: [consts.ONLINK],
+                consts.DST: vip_cidr.exploded,
+                consts.PREFSRC: vip['ip_address'],
+                consts.SCOPE: 'link',
                 consts.TABLE: 1,
+                consts.IGNORE: ignore
+            })
+            self.rules.append({
+                consts.SRC: vip['ip_address'],
+                consts.SRC_LEN: 128 if ip_version == 6 else 32,
+                consts.TABLE: 1,
+                consts.IGNORE: ignore
             })
 
-        # In ACTIVE_STANDBY topology, keepalived sets some addresses, routes
-        # and rules.
-        # Keep track of those resources in the interface file but mark them
-        # with a special flag so the amphora-interface would not add/delete
-        # keepalived-maintained things.
-        ignore = topology == consts.TOPOLOGY_ACTIVE_STANDBY
-
-        if ignore:
-            # Keepalived sets this prefixlen for the addresses it maintains
-            vip_prefixlen = 32 if ip_version == 4 else 128
-        else:
-            vip_prefixlen = prefixlen
-
-        self.addresses.append({
-            consts.ADDRESS: vip,
-            consts.PREFIXLEN: vip_prefixlen,
-            consts.IGNORE: ignore
-        })
-        vip_cidr = ipaddress.ip_network(
-            "{}/{}".format(vip, prefixlen), strict=False)
-        self.routes.append({
-            consts.DST: vip_cidr.exploded,
-            consts.PREFSRC: vip,
-            consts.SCOPE: 'link',
-            consts.TABLE: 1,
-            consts.IGNORE: ignore
-        })
-        self.rules.append({
-            consts.SRC: vip,
-            consts.SRC_LEN: 128 if ip_version == 6 else 32,
-            consts.TABLE: 1,
-            consts.IGNORE: ignore
-        })
-
-        self.routes.extend(self.get_host_routes(host_routes))
-        self.routes.extend(self.get_host_routes(host_routes,
-                                                table=1))
-
-        ip_versions = {ip_version}
+            self.routes.extend(self.get_host_routes(vip['host_routes']))
+            self.routes.extend(self.get_host_routes(vip['host_routes'],
+                                                    table=1))
 
         if fixed_ips:
             for fixed_ip in fixed_ips:

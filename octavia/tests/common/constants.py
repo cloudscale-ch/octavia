@@ -215,6 +215,7 @@ MOCK_MANAGEMENT_PORT2 = {'port': {'network_id': MOCK_MANAGEMENT_NET_ID,
                                   'fixed_ips': MOCK_MANAGEMENT_FIXED_IPS2}}
 
 MOCK_VIP_SUBNET_ID = 'vip-subnet-1'
+MOCK_VIP_SUBNET_ID2 = 'vip-subnet-2'
 MOCK_VIP_NET_ID = 'vip-net-1'
 MOCK_VRRP_PORT_ID1 = 'vrrp-port-1'
 MOCK_VRRP_PORT_ID2 = 'vrrp-port-2'

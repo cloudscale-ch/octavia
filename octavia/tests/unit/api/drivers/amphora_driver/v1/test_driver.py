@@ -34,13 +34,15 @@ class TestAmphoraDriver(base.TestRpc):
     def test_create_vip_port(self, mock_get_net_driver):
         mock_net_driver = mock.MagicMock()
         mock_get_net_driver.return_value = mock_net_driver
-        mock_net_driver.allocate_vip.return_value = self.sample_data.db_vip
+        mock_net_driver.allocate_vip.return_value = self.sample_data.db_vip, []
 
-        provider_vip_dict = self.amp_driver.create_vip_port(
+        provider_vip_dict, add_vip_dicts = self.amp_driver.create_vip_port(
             self.sample_data.lb_id, self.sample_data.project_id,
-            self.sample_data.provider_vip_dict)
+            self.sample_data.provider_vip_dict,
+            self.sample_data.provider_additional_vip_dicts)
 
         self.assertEqual(self.sample_data.provider_vip_dict, provider_vip_dict)
+        self.assertFalse(add_vip_dicts)
 
     @mock.patch('octavia.common.utils.get_network_driver')
     def test_create_vip_port_without_port_security_enabled(
@@ -55,7 +57,8 @@ class TestAmphoraDriver(base.TestRpc):
         self.assertRaises(exceptions.DriverError,
                           self.amp_driver.create_vip_port,
                           self.sample_data.lb_id, self.sample_data.project_id,
-                          self.sample_data.provider_vip_dict)
+                          self.sample_data.provider_vip_dict,
+                          self.sample_data.provider_additional_vip_dicts)
 
     @mock.patch('octavia.common.utils.get_network_driver')
     def test_create_vip_port_failed(self, mock_get_net_driver):
@@ -67,7 +70,8 @@ class TestAmphoraDriver(base.TestRpc):
         self.assertRaises(exceptions.DriverError,
                           self.amp_driver.create_vip_port,
                           self.sample_data.lb_id, self.sample_data.project_id,
-                          self.sample_data.provider_vip_dict)
+                          self.sample_data.provider_vip_dict,
+                          self.sample_data.provider_additional_vip_dicts)
 
     # Load Balancer
     @mock.patch('oslo_messaging.RPCClient.cast')

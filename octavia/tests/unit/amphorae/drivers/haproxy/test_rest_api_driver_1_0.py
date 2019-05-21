@@ -111,7 +111,8 @@ class TestHaproxyAmphoraLoadBalancerDriverTest(base.TestCase):
                             'mac_address': FAKE_MAC_ADDRESS,
                             'vrrp_ip': self.amp.vrrp_ip,
                             'mtu': FAKE_MTU,
-                            'host_routes': host_routes_data}
+                            'host_routes': host_routes_data,
+                            'additional_vips': []}
 
         self.timeout_dict = {constants.REQ_CONN_TIMEOUT: 1,
                              constants.REQ_READ_TIMEOUT: 2,
@@ -747,6 +748,7 @@ class TestHaproxyAmphoraLoadBalancerDriverTest(base.TestCase):
                                gateway=None,
                                vrrp_ip=self.amp.vrrp_ip,
                                host_routes=[],
+                               additional_vips=[],
                                mtu=FAKE_MTU
                            )))
 

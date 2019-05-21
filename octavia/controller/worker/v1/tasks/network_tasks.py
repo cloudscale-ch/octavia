@@ -582,14 +582,18 @@ class AllocateVIP(BaseNetworkTask):
                   loadbalancer.vip.subnet_id,
                   loadbalancer.vip.ip_address,
                   loadbalancer.id)
-        vip = self.network_driver.allocate_vip(loadbalancer)
+        vip, additional_vips = self.network_driver.allocate_vip(loadbalancer)
         LOG.info("Allocated vip with port id %s, subnet id %s, ip address %s "
                  "for load balancer %s",
                  loadbalancer.vip.port_id,
                  loadbalancer.vip.subnet_id,
                  loadbalancer.vip.ip_address,
                  loadbalancer.id)
-        return vip
+        for add_vip in additional_vips:
+            LOG.debug('Allocated an additional VIP: subnet=%(subnet)s '
+                      'ip_address=%(ip)s', {'subnet': add_vip.subnet_id,
+                                            'ip': add_vip.ip_address})
+        return vip, additional_vips
 
     def revert(self, result, loadbalancer, *args, **kwargs):
         """Handle a failure to allocate vip."""
@@ -597,7 +601,7 @@ class AllocateVIP(BaseNetworkTask):
         if isinstance(result, failure.Failure):
             LOG.exception("Unable to allocate VIP")
             return
-        vip = result
+        vip, additional_vips = result
         LOG.warning("Deallocating vip %s", vip.ip_address)
         try:
             self.network_driver.deallocate_vip(vip)

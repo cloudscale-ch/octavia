@@ -103,6 +103,11 @@ class TestLoadBalancerPOST(base.BaseTypesTest, TestLoadBalancer):
         self.assertRaises(exc.InvalidInput, wsme_json.fromjson, self._type,
                           body)
 
+    def test_additional_vips(self):
+        body = {"additional_vips": [{"subnet_id": uuidutils.generate_uuid(),
+                                    "ip_address": "10.0.0.1"}]}
+        wsme_json.fromjson(self._type, body)
+
 
 class TestLoadBalancerPUT(base.BaseTypesTest, TestLoadBalancer):
 

@@ -420,6 +420,28 @@ class UpdateVIPAfterAllocation(BaseDatabaseTask):
         return lb
 
 
+class UpdateAdditionalVIPsAfterAllocation(BaseDatabaseTask):
+    """Update a VIP associated with a given load balancer."""
+
+    def execute(self, loadbalancer_id, additional_vips):
+        """Update additional VIPs associated with a given load balancer.
+
+        :param loadbalancer_id: Id of a load balancer which VIP should be
+               updated.
+        :param additional_vips: data_models.Vip object with update data.
+        :returns: The load balancer object.
+        """
+        for vip in additional_vips:
+            LOG.debug('Updating additional VIP: subnet=%(subnet)s '
+                      'ip_address=%(ip)s', {'subnet': vip.subnet_id,
+                                            'ip': vip.ip_address})
+            self.repos.additional_vip.update(
+                db_apis.get_session(), loadbalancer_id, vip.subnet_id,
+                ip_address=vip.ip_address, port_id=vip.port_id)
+        return self.repos.load_balancer.get(db_apis.get_session(),
+                                            id=loadbalancer_id)
+
+
 class UpdateAmphoraeVIPData(BaseDatabaseTask):
     """Update amphorae VIP data."""
 

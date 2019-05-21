@@ -199,12 +199,13 @@ class TestLoadBalancerFlows(base.TestCase):
         self.assertIn(constants.DELTAS, create_flow.provides)
         self.assertIn(constants.UPDATED_PORTS, create_flow.provides)
         self.assertIn(constants.VIP, create_flow.provides)
+        self.assertIn(constants.ADDITIONAL_VIPS, create_flow.provides)
         self.assertIn(constants.AMP_DATA, create_flow.provides)
         self.assertIn(constants.SERVER_PEM, create_flow.provides)
         self.assertIn(constants.AMPHORA_NETWORK_CONFIG, create_flow.provides)
 
         self.assertEqual(7, len(create_flow.requires))
-        self.assertEqual(13, len(create_flow.provides))
+        self.assertEqual(14, len(create_flow.provides))
 
     def test_get_create_load_balancer_flows_active_standby_listeners(
             self, mock_get_net_driver):
@@ -226,12 +227,13 @@ class TestLoadBalancerFlows(base.TestCase):
         self.assertIn(constants.DELTAS, create_flow.provides)
         self.assertIn(constants.UPDATED_PORTS, create_flow.provides)
         self.assertIn(constants.VIP, create_flow.provides)
+        self.assertIn(constants.ADDITIONAL_VIPS, create_flow.provides)
         self.assertIn(constants.AMP_DATA, create_flow.provides)
         self.assertIn(constants.AMPHORAE_NETWORK_CONFIG,
                       create_flow.provides)
 
         self.assertEqual(6, len(create_flow.requires))
-        self.assertEqual(16, len(create_flow.provides),
+        self.assertEqual(17, len(create_flow.provides),
                          create_flow.provides)
 
     def _test_get_failover_LB_flow_single(self, amphorae):
@@ -261,11 +263,12 @@ class TestLoadBalancerFlows(base.TestCase):
         self.assertIn(constants.LOADBALANCER, failover_flow.provides)
         self.assertIn(constants.SERVER_PEM, failover_flow.provides)
         self.assertIn(constants.VIP, failover_flow.provides)
+        self.assertIn(constants.ADDITIONAL_VIPS, failover_flow.provides)
         self.assertIn(constants.VIP_SG_ID, failover_flow.provides)
 
         self.assertEqual(6, len(failover_flow.requires),
                          failover_flow.requires)
-        self.assertEqual(12, len(failover_flow.provides),
+        self.assertEqual(13, len(failover_flow.provides),
                          failover_flow.provides)
 
     def test_get_failover_LB_flow_no_amps_single(self, mock_get_net_driver):
@@ -336,11 +339,12 @@ class TestLoadBalancerFlows(base.TestCase):
         self.assertIn(constants.LOADBALANCER, failover_flow.provides)
         self.assertIn(constants.SERVER_PEM, failover_flow.provides)
         self.assertIn(constants.VIP, failover_flow.provides)
+        self.assertIn(constants.ADDITIONAL_VIPS, failover_flow.provides)
         self.assertIn(constants.VIP_SG_ID, failover_flow.provides)
 
         self.assertEqual(6, len(failover_flow.requires),
                          failover_flow.requires)
-        self.assertEqual(16, len(failover_flow.provides),
+        self.assertEqual(17, len(failover_flow.provides),
                          failover_flow.provides)
 
     def test_get_failover_LB_flow_no_amps_act_stdby(self, mock_get_net_driver):

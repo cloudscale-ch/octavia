@@ -97,6 +97,10 @@ class Port(data_models.BaseDataModel):
         self.security_group_ids = security_group_ids or []
 
     def get_subnet_id(self, fixed_ip_address):
+        # TODO(rm_work): We are assuming that we can't have the same IP on
+        # multiple subnets on the same port, because it wouldn't work properly.
+        # However, I don't know that we prevent it in the API -- so this might
+        # exhibit undefined behavior if a user tries to do that.
         for fixed_ip in self.fixed_ips:
             if fixed_ip.ip_address == fixed_ip_address:
                 return fixed_ip.subnet_id
@@ -135,7 +139,7 @@ class AmphoraNetworkConfig(data_models.BaseDataModel):
 
     def __init__(self, amphora=None, vip_subnet=None, vip_port=None,
                  vrrp_subnet=None, vrrp_port=None, ha_subnet=None,
-                 ha_port=None):
+                 ha_port=None, additional_vip_data=None):
         self.amphora = amphora
         self.vip_subnet = vip_subnet
         self.vip_port = vip_port
@@ -143,6 +147,14 @@ class AmphoraNetworkConfig(data_models.BaseDataModel):
         self.vrrp_port = vrrp_port
         self.ha_subnet = ha_subnet
         self.ha_port = ha_port
+        self.additional_vip_data = additional_vip_data or []
+
+
+class AdditionalVipData(data_models.BaseDataModel):
+
+    def __init__(self, ip_address=None, subnet=None):
+        self.ip_address = ip_address
+        self.subnet = subnet
 
 
 class HostRoute(data_models.BaseDataModel):

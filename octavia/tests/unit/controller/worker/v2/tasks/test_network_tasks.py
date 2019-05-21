@@ -1372,24 +1372,26 @@ class TestNetworkTasks(base.TestCase):
         mock_get_net_driver.return_value = mock_driver
         net = network_tasks.AllocateVIP()
 
-        mock_driver.allocate_vip.return_value = LB.vip
+        mock_driver.allocate_vip.return_value = LB.vip, []
 
         mock_driver.reset_mock()
-        self.assertEqual(LB.vip.to_dict(),
+        self.assertEqual((LB.vip.to_dict(), []),
                          net.execute(self.load_balancer_mock))
         mock_driver.allocate_vip.assert_called_once_with(LB)
 
         # revert
         vip_mock = VIP.to_dict()
-        net.revert(vip_mock, self.load_balancer_mock)
+        additional_vips_mock = mock.MagicMock()
+        net.revert((vip_mock, additional_vips_mock), self.load_balancer_mock)
         mock_driver.deallocate_vip.assert_called_once_with(
             o_data_models.Vip(**vip_mock))
 
         # revert exception
         mock_driver.reset_mock()
+        additional_vips_mock.reset_mock()
         mock_driver.deallocate_vip.side_effect = Exception('DeallVipException')
         vip_mock = VIP.to_dict()
-        net.revert(vip_mock, self.load_balancer_mock)
+        net.revert((vip_mock, additional_vips_mock), self.load_balancer_mock)
         mock_driver.deallocate_vip.assert_called_once_with(o_data_models.Vip(
             **vip_mock))
 
@@ -1402,10 +1404,10 @@ class TestNetworkTasks(base.TestCase):
         mock_get_net_driver.return_value = mock_driver
         net = network_tasks.AllocateVIPforFailover()
 
-        mock_driver.allocate_vip.return_value = LB.vip
+        mock_driver.allocate_vip.return_value = LB.vip, []
 
         mock_driver.reset_mock()
-        self.assertEqual(LB.vip.to_dict(),
+        self.assertEqual((LB.vip.to_dict(), []),
                          net.execute(self.load_balancer_mock))
         mock_driver.allocate_vip.assert_called_once_with(LB)
 

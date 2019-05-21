@@ -99,10 +99,15 @@ class AmphoraProviderDriver(driver_base.ProviderDriver):
                 operator_fault_string=msg)
 
     # Load Balancer
-    def create_vip_port(self, loadbalancer_id, project_id, vip_dictionary):
+    def create_vip_port(self, loadbalancer_id, project_id, vip_dictionary,
+                        additional_vip_dicts):
         vip_obj = driver_utils.provider_vip_dict_to_vip_obj(vip_dictionary)
+        add_vip_objs = [
+            driver_utils.provider_additional_vip_dict_to_vip_obj(add_vip)
+            for add_vip in additional_vip_dicts]
         lb_obj = data_models.LoadBalancer(id=loadbalancer_id,
-                                          project_id=project_id, vip=vip_obj)
+                                          project_id=project_id, vip=vip_obj,
+                                          additional_vips=add_vip_objs)
 
         network_driver = utils.get_network_driver()
         vip_network = network_driver.get_network(
@@ -113,7 +118,7 @@ class AmphoraProviderDriver(driver_base.ProviderDriver):
                                          operator_fault_string=message)
 
         try:
-            vip = network_driver.allocate_vip(lb_obj)
+            vip, add_vips = network_driver.allocate_vip(lb_obj)
         except network_base.AllocateVIPException as e:
             message = str(e)
             if getattr(e, 'orig_msg', None) is not None:
@@ -123,7 +128,10 @@ class AmphoraProviderDriver(driver_base.ProviderDriver):
 
         LOG.info('Amphora provider created VIP port %s for load balancer %s.',
                  vip.port_id, loadbalancer_id)
-        return driver_utils.vip_dict_to_provider_dict(vip.to_dict())
+        vip_return_dict = driver_utils.vip_dict_to_provider_dict(vip.to_dict())
+        add_return_dicts = [driver_utils.additional_vip_dict_to_provider_dict(
+            add_vip.to_dict()) for add_vip in add_vips]
+        return vip_return_dict, add_return_dicts
 
     # TODO(johnsom) convert this to octavia_lib constant flavor
     # once octavia is transitioned to use octavia_lib

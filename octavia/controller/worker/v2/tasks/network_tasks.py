@@ -616,14 +616,20 @@ class AllocateVIP(BaseNetworkTask):
                   loadbalancer[constants.LOADBALANCER_ID])
         db_lb = self.loadbalancer_repo.get(
             db_apis.get_session(), id=loadbalancer[constants.LOADBALANCER_ID])
-        vip = self.network_driver.allocate_vip(db_lb)
+        vip, additional_vips = self.network_driver.allocate_vip(db_lb)
         LOG.info("Allocated vip with port id %s, subnet id %s, ip address %s "
                  "for load balancer %s",
                  loadbalancer[constants.VIP_PORT_ID],
                  loadbalancer[constants.VIP_SUBNET_ID],
                  loadbalancer[constants.VIP_ADDRESS],
                  loadbalancer[constants.LOADBALANCER_ID])
-        return vip.to_dict()
+        for add_vip in additional_vips:
+            LOG.debug('Allocated an additional VIP: subnet=%(subnet)s '
+                      'ip_address=%(ip)s', {'subnet': add_vip.subnet_id,
+                                            'ip': add_vip.ip_address})
+        return (vip.to_dict(),
+                [additional_vip.to_dict()
+                 for additional_vip in additional_vips])
 
     def revert(self, result, loadbalancer, *args, **kwargs):
         """Handle a failure to allocate vip."""
@@ -631,7 +637,8 @@ class AllocateVIP(BaseNetworkTask):
         if isinstance(result, failure.Failure):
             LOG.exception("Unable to allocate VIP")
             return
-        vip = data_models.Vip(**result)
+        vip, additional_vips = result
+        vip = data_models.Vip(**vip)
         LOG.warning("Deallocating vip %s", vip.ip_address)
         try:
             self.network_driver.deallocate_vip(vip)
