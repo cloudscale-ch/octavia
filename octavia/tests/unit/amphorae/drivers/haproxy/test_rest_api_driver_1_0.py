@@ -94,6 +94,7 @@ class TestHaproxyAmphoraLoadBalancerDriverTest(base.TestCase):
         self.fixed_ip = mock.MagicMock()
         self.fixed_ip.ip_address = '198.51.100.5'
         self.fixed_ip.subnet.cidr = '198.51.100.0/24'
+        self.fixed_ip.subnet.gateway_ip = FAKE_GATEWAY
         self.network = network_models.Network(mtu=FAKE_MTU)
         self.port = network_models.Port(mac_address=FAKE_MAC_ADDRESS,
                                         fixed_ips=[self.fixed_ip],
@@ -116,6 +117,11 @@ class TestHaproxyAmphoraLoadBalancerDriverTest(base.TestCase):
                              constants.REQ_READ_TIMEOUT: 2,
                              constants.CONN_MAX_RETRIES: 3,
                              constants.CONN_RETRY_INTERVAL: 4}
+        self.amp_net_config = network_models.AmphoraNetworkConfig(
+            vip_subnet=network_models.Subnet(
+                id=self.lb.vip.subnet_id,
+                cidr='10.1.0.0/16',
+                host_routes=[]))
 
     @mock.patch('octavia.amphorae.drivers.haproxy.rest_api_driver.'
                 'HaproxyAmphoraLoadBalancerDriver._process_secret')
@@ -684,6 +690,13 @@ class TestHaproxyAmphoraLoadBalancerDriverTest(base.TestCase):
         amphorae_network_config.get().vip_subnet.cidr = FAKE_CIDR
         amphorae_network_config.get().vip_subnet.gateway_ip = FAKE_GATEWAY
         amphorae_network_config.get().vip_subnet.host_routes = self.host_routes
+        amphorae_network_config.get().vip_subnet.to_dict.return_value = {
+            'cidr': FAKE_CIDR,
+            'gateway_ip': FAKE_GATEWAY,
+            'host_routes': [
+                hr.to_dict(recurse=True)
+                for hr in self.host_routes]
+        }
         amphorae_network_config.get().vrrp_port = self.port
         self.driver.post_vip_plug(self.amp, self.lb, amphorae_network_config)
         self.driver.clients[API_VERSION].plug_vip.assert_called_once_with(
@@ -694,7 +707,7 @@ class TestHaproxyAmphoraLoadBalancerDriverTest(base.TestCase):
         port = network_models.Port(mac_address=FAKE_MAC_ADDRESS,
                                    fixed_ips=[],
                                    network=self.network)
-        self.driver.post_network_plug(self.amp, port)
+        self.driver.post_network_plug(self.amp, port, self.amp_net_config)
         self.driver.clients[API_VERSION].plug_network.assert_called_once_with(
             self.amp, dict(mac_address=FAKE_MAC_ADDRESS,
                            fixed_ips=[],
@@ -703,13 +716,39 @@ class TestHaproxyAmphoraLoadBalancerDriverTest(base.TestCase):
         self.driver.clients[API_VERSION].plug_network.reset_mock()
 
         # Test fixed IP path
-        self.driver.post_network_plug(self.amp, self.port)
+        self.driver.post_network_plug(self.amp, self.port, self.amp_net_config)
         self.driver.clients[API_VERSION].plug_network.assert_called_once_with(
             self.amp, dict(mac_address=FAKE_MAC_ADDRESS,
                            fixed_ips=[dict(ip_address='198.51.100.5',
                                            subnet_cidr='198.51.100.0/24',
-                                           host_routes=[])],
+                                           host_routes=[],
+                                           gateway=FAKE_GATEWAY)],
                            mtu=FAKE_MTU))
+
+        self.driver.clients[API_VERSION].plug_network.reset_mock()
+
+        # Test member network on vip port
+        port = network_models.Port(id=self.amp.vrrp_port_id,
+                                   mac_address=FAKE_MAC_ADDRESS,
+                                   fixed_ips=[self.fixed_ip],
+                                   network=self.network)
+        self.driver.post_network_plug(self.amp, port, self.amp_net_config)
+        self.driver.clients[API_VERSION].plug_network.assert_called_once_with(
+            self.amp, dict(mac_address=FAKE_MAC_ADDRESS,
+                           fixed_ips=[dict(ip_address='198.51.100.5',
+                                           subnet_cidr='198.51.100.0/24',
+                                           host_routes=[],
+                                           gateway=FAKE_GATEWAY)],
+                           mtu=FAKE_MTU,
+                           vip_net_info=dict(
+                               vip=self.amp.ha_ip,
+                               subnet_cidr='10.1.0.0/16',
+                               mac_address=FAKE_MAC_ADDRESS,
+                               gateway=None,
+                               vrrp_ip=self.amp.vrrp_ip,
+                               host_routes=[],
+                               mtu=FAKE_MTU
+                           )))
 
     def test_post_network_plug_with_host_routes(self):
         SUBNET_ID = 'SUBNET_ID'
@@ -724,6 +763,7 @@ class TestHaproxyAmphoraLoadBalancerDriverTest(base.TestCase):
                        network_models.HostRoute(destination=DEST2,
                                                 nexthop=NEXTHOP)]
         subnet = network_models.Subnet(id=SUBNET_ID, cidr=SUBNET_CIDR,
+                                       gateway_ip=FAKE_GATEWAY,
                                        ip_version=4, host_routes=host_routes)
         fixed_ips = [
             network_models.FixedIP(subnet_id=subnet.id, ip_address=FIXED_IP1,
@@ -734,12 +774,14 @@ class TestHaproxyAmphoraLoadBalancerDriverTest(base.TestCase):
         port = network_models.Port(mac_address=FAKE_MAC_ADDRESS,
                                    fixed_ips=fixed_ips,
                                    network=self.network)
-        self.driver.post_network_plug(self.amp, port)
+        self.driver.post_network_plug(self.amp, port, self.amp_net_config)
         expected_fixed_ips = [
             {'ip_address': FIXED_IP1, 'subnet_cidr': SUBNET_CIDR,
+             'gateway': FAKE_GATEWAY,
              'host_routes': [{'destination': DEST1, 'nexthop': NEXTHOP},
                              {'destination': DEST2, 'nexthop': NEXTHOP}]},
             {'ip_address': FIXED_IP2, 'subnet_cidr': SUBNET_CIDR,
+             'gateway': FAKE_GATEWAY,
              'host_routes': [{'destination': DEST1, 'nexthop': NEXTHOP},
                              {'destination': DEST2, 'nexthop': NEXTHOP}]}
         ]

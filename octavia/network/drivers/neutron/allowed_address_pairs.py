@@ -547,7 +547,7 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
                       amphora.compute_id)
             return
         try:
-            self.unplug_network(amphora.compute_id, subnet.network_id)
+            self.unplug_network(amphora, subnet.network_id)
         except Exception:
             pass
         try:
@@ -610,15 +610,14 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
 
         return self._nova_interface_to_octavia_interface(compute_id, interface)
 
-    def unplug_network(self, compute_id, network_id, ip_address=None):
+    def unplug_network(self, compute_id, network_id):
         interfaces = self.get_plugged_networks(compute_id)
         if not interfaces:
             msg = ('Amphora with compute id {compute_id} does not have any '
                    'plugged networks').format(compute_id=compute_id)
             raise base.NetworkNotFound(msg)
 
-        unpluggers = self._get_interfaces_to_unplug(interfaces, network_id,
-                                                    ip_address=ip_address)
+        unpluggers = self._get_interfaces_to_unplug(interfaces, network_id)
         removed_port_ids = set()
         for index, unplugger in enumerate(unpluggers):
             self.compute.detach_port(
