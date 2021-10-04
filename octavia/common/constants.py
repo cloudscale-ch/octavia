@@ -929,5 +929,7 @@ IFACE_DOWN = 'down'
 
 COMMAND = 'command'
 
+IGNORE = 'ignore'
+
 # Amphora network directory
 AMP_NET_DIR_TEMPLATE = '/etc/octavia/interfaces/'

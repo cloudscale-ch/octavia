@@ -1835,7 +1835,6 @@ class TestServerTestCase(base.TestCase):
                  consts.NETNS_PRIMARY_INTERFACE], stderr=-2)
 
         mock_check_output.side_effect = [
-            'unplug1',
             subprocess.CalledProcessError(
                 7, 'test', RANDOM_ERROR), subprocess.CalledProcessError(
                 7, 'test', RANDOM_ERROR)]
@@ -2196,7 +2195,6 @@ class TestServerTestCase(base.TestCase):
                     'amphora-interface', 'up', '{netns_int}'.format(
                         netns_int=consts.NETNS_PRIMARY_INTERFACE)], stderr=-2)
         mock_check_output.side_effect = [
-            'unplug1',
             subprocess.CalledProcessError(
                 7, 'test', RANDOM_ERROR), subprocess.CalledProcessError(
                 7, 'test', RANDOM_ERROR)]

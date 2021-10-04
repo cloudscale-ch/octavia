@@ -106,7 +106,7 @@ class VIPInterfaceFile(InterfaceFile):
     def __init__(self, name, mtu,
                  vip, ip_version, prefixlen,
                  gateway, vrrp_ip, host_routes,
-                 topology):
+                 topology, fixed_ips=None):
 
         super().__init__(name, mtu=mtu)
 
@@ -137,41 +137,75 @@ class VIPInterfaceFile(InterfaceFile):
                 consts.TABLE: 1,
             })
 
-        # In ACTIVE_STANDBY topology, keepalived sets these addresses, routes
-        # and rules
-        if topology == consts.TOPOLOGY_SINGLE:
-            self.addresses.append({
-                consts.ADDRESS: vip,
-                consts.PREFIXLEN: prefixlen
-            })
-            vip_cidr = ipaddress.ip_network(
-                "{}/{}".format(vip, prefixlen), strict=False)
-            self.routes.append({
-                consts.DST: vip_cidr.exploded,
-                consts.PREFSRC: vip,
-                consts.SCOPE: 'link',
-                consts.TABLE: 1,
-            })
-            self.rules.append({
-                consts.SRC: vip,
-                consts.SRC_LEN: 128 if ip_version == 6 else 32,
-                consts.TABLE: 1,
-            })
+        # In ACTIVE_STANDBY topology, keepalived sets some addresses, routes
+        # and rules.
+        # Keep track of those resources in the interface file but mark them
+        # with a special flag so the amphora-interface would not add/delete
+        # keepalived-maintained things.
+        ignore = topology == consts.TOPOLOGY_ACTIVE_STANDBY
+
+        if ignore:
+            # Keepalived sets this prefixlen for the addresses it maintains
+            vip_prefixlen = 32 if ip_version == 4 else 128
+        else:
+            vip_prefixlen = prefixlen
+
+        self.addresses.append({
+            consts.ADDRESS: vip,
+            consts.PREFIXLEN: vip_prefixlen,
+            consts.IGNORE: ignore
+        })
+        vip_cidr = ipaddress.ip_network(
+            "{}/{}".format(vip, prefixlen), strict=False)
+        self.routes.append({
+            consts.DST: vip_cidr.exploded,
+            consts.PREFSRC: vip,
+            consts.SCOPE: 'link',
+            consts.TABLE: 1,
+            consts.IGNORE: ignore
+        })
+        self.rules.append({
+            consts.SRC: vip,
+            consts.SRC_LEN: 128 if ip_version == 6 else 32,
+            consts.TABLE: 1,
+            consts.IGNORE: ignore
+        })
 
         self.routes.extend(self.get_host_routes(host_routes))
         self.routes.extend(self.get_host_routes(host_routes,
                                                 table=1))
 
-        self.scripts[consts.IFACE_UP].append({
-            consts.COMMAND: (
-                "/usr/local/bin/lvs-masquerade.sh add {} {}".format(
-                    'ipv6' if ip_version == 6 else 'ipv4', name))
-        })
-        self.scripts[consts.IFACE_DOWN].append({
-            consts.COMMAND: (
-                "/usr/local/bin/lvs-masquerade.sh delete {} {}".format(
-                    'ipv6' if ip_version == 6 else 'ipv4', name))
-        })
+        ip_versions = {ip_version}
+
+        if fixed_ips:
+            for fixed_ip in fixed_ips:
+                ip_addr = fixed_ip['ip_address']
+                cidr = fixed_ip['subnet_cidr']
+                ip = ipaddress.ip_address(ip_addr)
+                network = ipaddress.ip_network(cidr)
+                prefixlen = network.prefixlen
+                self.addresses.append({
+                    consts.ADDRESS: fixed_ip['ip_address'],
+                    consts.PREFIXLEN: prefixlen,
+                })
+
+                ip_versions.add(ip.version)
+
+                host_routes = self.get_host_routes(
+                    fixed_ip.get('host_routes', []))
+                self.routes.extend(host_routes)
+
+        for ip_v in ip_versions:
+            self.scripts[consts.IFACE_UP].append({
+                consts.COMMAND: (
+                    "/usr/local/bin/lvs-masquerade.sh add {} {}".format(
+                        'ipv6' if ip_v == 6 else 'ipv4', name))
+            })
+            self.scripts[consts.IFACE_DOWN].append({
+                consts.COMMAND: (
+                    "/usr/local/bin/lvs-masquerade.sh delete {} {}".format(
+                        'ipv6' if ip_v == 6 else 'ipv4', name))
+            })
 
 
 class PortInterfaceFile(InterfaceFile):
