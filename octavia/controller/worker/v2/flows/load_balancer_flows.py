@@ -66,9 +66,12 @@ class LoadBalancerFlows(object):
         ))
         lb_create_flow.add(network_tasks.AllocateVIP(
             requires=constants.LOADBALANCER,
-            provides=constants.VIP))
+            provides=(constants.VIP, constants.ADDITIONAL_VIPS)))
         lb_create_flow.add(database_tasks.UpdateVIPAfterAllocation(
             requires=(constants.LOADBALANCER_ID, constants.VIP),
+            provides=constants.LOADBALANCER))
+        lb_create_flow.add(database_tasks.UpdateAdditionalVIPsAfterAllocation(
+            requires=(constants.LOADBALANCER_ID, constants.ADDITIONAL_VIPS),
             provides=constants.LOADBALANCER))
         lb_create_flow.add(network_tasks.UpdateVIPSecurityGroup(
             requires=constants.LOADBALANCER_ID))
@@ -404,12 +407,18 @@ class LoadBalancerFlows(object):
         # Check that the VIP port exists and is ok
         failover_LB_flow.add(
             network_tasks.AllocateVIPforFailover(
-                requires=constants.LOADBALANCER, provides=constants.VIP))
+                requires=constants.LOADBALANCER,
+                provides=(constants.VIP, constants.ADDITIONAL_VIPS)))
 
         # Update the database with the VIP information
         failover_LB_flow.add(database_tasks.UpdateVIPAfterAllocation(
             requires=(constants.LOADBALANCER_ID, constants.VIP),
             provides=constants.LOADBALANCER))
+        failover_LB_flow.add(
+            database_tasks.UpdateAdditionalVIPsAfterAllocation(
+                requires=(constants.LOADBALANCER_ID,
+                          constants.ADDITIONAL_VIPS),
+                provides=constants.LOADBALANCER))
 
         # Make sure the SG has the correct rules and re-apply to the
         # VIP port. It is not used on the VIP port, but will help lock
