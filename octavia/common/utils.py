@@ -20,6 +20,7 @@
 
 import base64
 import hashlib
+import ipaddress
 import re
 import socket
 
@@ -69,6 +70,11 @@ def get_network_driver():
         invoke_on_load=True
     ).driver
     return network_driver
+
+
+def ip_version(ip_address):
+    ip = ipaddress.ip_address(ip_address)
+    return ip.version
 
 
 def is_ipv4(ip_address):
