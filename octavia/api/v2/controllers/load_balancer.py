@@ -303,7 +303,7 @@ class LoadBalancersController(base.BaseController):
             load_balancer.vip_network_id = subnet.network_id
 
         # Multi-vip validation for ensuring subnets are "sane"
-        self._validate_subnets_share_network_but_no_duplicates(load_balancer)
+        # self._validate_subnets_share_network_but_no_duplicates(load_balancer)
 
     @staticmethod
     def _create_vip_port_if_not_exist(load_balancer_db):
