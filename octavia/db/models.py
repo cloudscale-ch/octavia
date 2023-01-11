@@ -508,8 +508,8 @@ class AdditionalVip(base_models.BASE):
     __tablename__ = "additional_vip"
 
     __table_args__ = (
-        sa.PrimaryKeyConstraint('load_balancer_id', 'subnet_id',
-                                name='pk_add_vip_load_balancer_subnet'),
+        sa.PrimaryKeyConstraint('load_balancer_id', 'subnet_id', 'ip_address',
+                                name='pk_add_vip_load_balancer_subnet_ip'),
     )
 
     load_balancer_id = sa.Column(
