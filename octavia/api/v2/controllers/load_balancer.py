@@ -225,28 +225,25 @@ class LoadBalancersController(base.BaseController):
 
     @staticmethod
     def _validate_subnets_share_network_but_no_duplicates(load_balancer):
-        # Validate that no subnet_id is used more than once
-        subnet_use_counts = {load_balancer.vip_subnet_id: 1}
-        for vip in load_balancer.additional_vips:
-            if vip.subnet_id in subnet_use_counts:
-                raise exceptions.ValidationException(detail=_(
-                    'Duplicate VIP subnet(s) specified. Only one IP can be '
-                    'bound per subnet.'))
-            subnet_use_counts[vip.subnet_id] = 1
-
         # Validate that all subnets belong to the same network
         network_driver = utils.get_network_driver()
-        used_subnets = {}
-        for subnet_id in subnet_use_counts:
-            used_subnets[subnet_id] = network_driver.get_subnet(subnet_id)
-        all_networks = [subnet.network_id for subnet in used_subnets.values()]
-        if len(set(all_networks)) > 1:
+        subnet_network_map = {
+            load_balancer.vip_subnet_id:
+            network_driver.get_subnet(load_balancer.vip_subnet_id).network_id
+        }
+
+        for vip in load_balancer.additional_vips:
+            if not vip.subnet_id in subnet_network_map:
+                subnet_network_map[vip.subnet_id] = \
+                    network_driver.get_subnet(vip.subnet_id).network_id
+
+        if len(set(subnet_network_map.values())) > 1:
             raise exceptions.ValidationException(detail=_(
                 'All VIP subnets must belong to the same network.'
             ))
         # Fill the network_id for each additional_vip
         for vip in load_balancer.additional_vips:
-            vip.network_id = used_subnets[vip.subnet_id].network_id
+            vip.network_id = subnet_network_map[vip.subnet_id]
 
     def _validate_vip_request_object(self, load_balancer, context=None):
         allowed_network_objects = []

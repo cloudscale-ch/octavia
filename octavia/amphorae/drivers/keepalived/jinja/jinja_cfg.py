@@ -105,13 +105,17 @@ class KeepalivedJinjaTemplater(object):
             vip = add_vip['ip_address']
             vip_addr = ipaddress.ip_address(vip)
             vip_ipv6 = vip_addr.version == 6
-            vip_cidr = add_vip['subnet']['cidr']
+            if add_vip['subnet']:
+                vip_cidr = add_vip['subnet']['cidr']
 
-            # Normalize and validate the VIP subnet CIDR
-            vip_network_cidr = ipaddress.ip_network(
-                vip_cidr).with_prefixlen
+                # Normalize and validate the VIP subnet CIDR
+                vip_network_cidr = ipaddress.ip_network(
+                    vip_cidr).with_prefixlen
 
-            host_routes = add_vip['subnet'].get('host_routes', [])
+                host_routes = add_vip['subnet'].get('host_routes', [])
+            else:
+                vip_cidr = vip_network_cidr = None
+                host_routes = []
 
             # Addresses that aren't the same family as the VRRP
             # interface will be in the "excluded" block

@@ -255,6 +255,8 @@ class Repositories(object):
             vip = models.Vip(**vip_dict)
             session.add(vip)
             for add_vip_dict in additional_vip_dicts:
+                # TODO somehow handle the case where the ip_address is yet
+                # unkown
                 add_vip_dict['load_balancer_id'] = lb_dict['id']
                 add_vip_dict['network_id'] = vip_dict.get('network_id')
                 add_vip_dict['port_id'] = vip_dict.get('port_id')
@@ -944,16 +946,18 @@ class VipRepository(BaseRepository):
 class AdditionalVipRepository(BaseRepository):
     model_class = models.AdditionalVip
 
-    def update(self, session, load_balancer_id, subnet_id,
+    def update(self, session, load_balancer_id, subnet_id, ip_address,
                **model_kwargs):
         """Updates an additional vip entity in the database.
 
-        Uses load_balancer_id + subnet_id.
+        Uses load_balancer_id + subnet_id + ip_address.
         """
         with session.begin(subtransactions=True):
             session.query(self.model_class).filter_by(
                 load_balancer_id=load_balancer_id,
-                subnet_id=subnet_id).update(model_kwargs)
+                subnet_id=subnet_id,
+                ip_address=ip_address,
+            ).update(model_kwargs)
 
 
 class HealthMonitorRepository(BaseRepository):
