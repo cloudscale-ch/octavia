@@ -954,16 +954,42 @@ class VipRepository(BaseRepository):
 class AdditionalVipRepository(BaseRepository):
     model_class = models.AdditionalVip
 
-    def update(self, session, load_balancer_id, subnet_id,
+    def update(self, session, load_balancer_id, subnet_id, ip_address,
                **model_kwargs):
         """Updates an additional vip entity in the database.
 
-        Uses load_balancer_id + subnet_id.
+        Uses load_balancer_id + subnet_id + ip_address.
         """
         with session.begin(subtransactions=True):
-            session.query(self.model_class).filter_by(
+            LOG.debug('Updating additional VIP (%s, %s, %s) with %s',
+                      load_balancer_id, subnet_id, ip_address, model_kwargs)
+
+            query = session.query(self.model_class).filter_by(
                 load_balancer_id=load_balancer_id,
-                subnet_id=subnet_id).update(model_kwargs)
+                subnet_id=subnet_id,
+                ip_address=ip_address,
+            )
+
+            if query.count() == 0 and subnet_id:
+                # Maybe we are trying to update the ip_address from None to
+                # an address assigned during port creation.
+                query = session.query(self.model_class).filter_by(
+                    load_balancer_id=load_balancer_id,
+                    subnet_id=subnet_id,
+                    ip_address=None,
+                )
+
+                # Also update the IP address
+                model_kwargs['ip_address'] = ip_address
+
+            if query.count() == 0:
+                raise exceptions.NotFound(
+                    load_balancer_id=load_balancer_id,
+                    subnet_id=subnet_id,
+                    ip_address=ip_address,
+                )
+
+            query.update(model_kwargs)
 
 
 class HealthMonitorRepository(BaseRepository):

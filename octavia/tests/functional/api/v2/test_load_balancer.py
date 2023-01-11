@@ -3152,24 +3152,6 @@ class TestLoadBalancerGraph(base.BaseAPITest):
         api_lb = response.json.get(self.root_tag)
         self._assert_graphs_equal(expected_lb, api_lb)
 
-    def test_with_additional_vips_duplicate_subnet(self):
-        create_lb, expected_lb = self._get_lb_bodies(
-            [], [])
-        create_lb['additional_vips'] = [
-            {'subnet_id': create_lb['vip_subnet_id']}]
-
-        # Pre-populate test subnet/network data
-        network_driver = utils.get_network_driver()
-        vip_subnet = network_driver.get_subnet(create_lb['vip_subnet_id'])
-        additional_subnet = network_driver.get_subnet(
-            create_lb['additional_vips'][0]['subnet_id'])
-        additional_subnet.network_id = vip_subnet.network_id
-
-        body = self._build_body(create_lb)
-        response = self.post(self.LBS_PATH, body, status=400)
-        error_text = response.json.get('faultstring')
-        self.assertIn('Duplicate VIP subnet(s) specified.', error_text)
-
     def test_with_additional_vips_different_networks(self):
         create_lb, expected_lb = self._get_lb_bodies(
             [], [], additional_vips=[
