@@ -147,6 +147,7 @@ class LoadBalancerPUT(BaseLoadBalancerType):
     name = wtypes.wsattr(wtypes.StringType(max_length=255))
     description = wtypes.wsattr(wtypes.StringType(max_length=255))
     vip_qos_policy_id = wtypes.wsattr(wtypes.UuidType())
+    additional_vips = wtypes.wsattr([AdditionalVipsType], default=[])
     admin_state_up = wtypes.wsattr(bool)
     tags = wtypes.wsattr(wtypes.ArrayType(wtypes.StringType(max_length=255)))
 
