@@ -1423,6 +1423,11 @@ class UpdateLoadbalancerInDB(BaseDatabaseTask):
                 self.vip_repo.update(session,
                                      loadbalancer[constants.LOADBALANCER_ID],
                                      **vip_dict)
+
+            # Don't update the additional VIPs here. They are already updated
+            # by the UpdateAdditionalVIPsAfterAllocation task
+            update_dict.pop('additional_vips', None)
+
             self.loadbalancer_repo.update(
                 session, loadbalancer[constants.LOADBALANCER_ID],
                 **update_dict)
