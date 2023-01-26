@@ -403,15 +403,16 @@ class ControllerWorker(object):
         """
 
         try:
-            self._get_db_obj_until_pending_update(
+            db_lb = self._get_db_obj_until_pending_update(
                 self._lb_repo,
                 original_load_balancer[constants.LOADBALANCER_ID])
-        except tenacity.RetryError:
+        except tenacity.RetryError as e:
             LOG.warning('Load balancer did not go into %s in 60 seconds. '
                         'This either due to an in-progress Octavia upgrade '
                         'or an overloaded and failing database. Assuming '
                         'an upgrade is in progress and continuing.',
                         constants.PENDING_UPDATE)
+            db_lb = e.last_attempt.result()
 
         store = {constants.LOADBALANCER: original_load_balancer,
                  constants.LOADBALANCER_ID:
@@ -420,6 +421,8 @@ class ControllerWorker(object):
 
         self.run_flow(
             flow_utils.get_update_load_balancer_flow,
+            db_lb.topology,
+            len(db_lb.listeners) > 0,
             store=store)
 
     @tenacity.retry(

@@ -164,7 +164,7 @@ class AmphoraProviderDriver(driver_base.ProviderDriver):
 
     def loadbalancer_update(self, original_load_balancer, new_loadbalancer):
         # Adapt the provider data model to the queue schema
-        lb_dict = new_loadbalancer.to_dict()
+        lb_dict = new_loadbalancer.to_dict(recurse=True)
         if 'admin_state_up' in lb_dict:
             lb_dict['enabled'] = lb_dict.pop('admin_state_up')
         # Put the qos_policy_id back under the vip element the controller
