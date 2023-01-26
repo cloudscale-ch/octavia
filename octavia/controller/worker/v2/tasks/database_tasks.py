@@ -472,9 +472,8 @@ class UpdateAdditionalVIPsAfterAllocation(BaseDatabaseTask):
         :returns: The load balancer object.
         """
         for vip in additional_vips:
-            LOG.info("Updating additional VIP with subnet_id %s, ip_address "
-                     "%s for load balancer %s",
-                     vip[constants.SUBNET_ID], vip[constants.IP_ADDRESS],
+            LOG.info("Updating additional VIP %s for load balancer %s",
+                     vip,
                      loadbalancer_id)
             self.repos.additional_vip.update(
                 db_apis.get_session(), loadbalancer_id,
@@ -1361,6 +1360,11 @@ class UpdateLoadbalancerInDB(BaseDatabaseTask):
             self.vip_repo.update(db_apis.get_session(),
                                  loadbalancer[constants.LOADBALANCER_ID],
                                  **vip_dict)
+
+        # Don't update the additional VIPs here. They are already updated by
+        # the UpdateAdditionalVIPsAfterAllocation task
+        update_dict.pop('additional_vips', None)
+
         self.loadbalancer_repo.update(db_apis.get_session(),
                                       loadbalancer[constants.LOADBALANCER_ID],
                                       **update_dict)
