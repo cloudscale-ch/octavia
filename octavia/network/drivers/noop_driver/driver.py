@@ -112,6 +112,10 @@ class NoopManager(object):
             ha_port_id=uuidutils.generate_uuid()
         )
 
+    def update_aap_port(self, load_balancer, subnet, amphora):
+        # TODO(gaudenz) Implement for testing
+        pass
+
     def unplug_vip(self, loadbalancer, vip):
         LOG.debug("Network %s no-op, unplug_vip loadbalancer %s, vip %s",
                   self.__class__.__name__,
@@ -531,6 +535,9 @@ class NoopNetworkDriver(driver_base.AbstractNetworkDriver):
 
     def plug_aap_port(self, load_balancer, vip, amphora, subnet):
         return self.driver.plug_aap_port(load_balancer, vip, amphora, subnet)
+
+    def update_aap_port(self, load_balancer, subnet, amphora):
+        self.driver.update_aap_port(load_balancer, subnet, amphora)
 
     def unplug_aap_port(self, vip, amphora, subnet):
         self.driver.unplug_aap_port(vip, amphora, subnet)

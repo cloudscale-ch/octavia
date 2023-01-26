@@ -143,15 +143,24 @@ class TestLoadBalancerFlows(base.TestCase):
 
     def test_get_update_load_balancer_flow(self, mock_get_net_driver):
 
-        lb_flow = self.LBFlow.get_update_load_balancer_flow()
+        lb_flow = self.LBFlow.get_update_load_balancer_flow(
+            constants.TOPOLOGY_SINGLE,
+            has_listeners=False,
+        )
 
         self.assertIsInstance(lb_flow, flow.Flow)
 
         self.assertIn(constants.LOADBALANCER, lb_flow.requires)
+        self.assertIn(constants.LOADBALANCER_ID, lb_flow.requires)
         self.assertIn(constants.UPDATE_DICT, lb_flow.requires)
-
-        self.assertEqual(0, len(lb_flow.provides))
         self.assertEqual(3, len(lb_flow.requires))
+
+        self.assertIn(constants.LOADBALANCER, lb_flow.provides)
+        self.assertIn(constants.VIP, lb_flow.provides)
+        self.assertIn(constants.ADDITIONAL_VIPS, lb_flow.provides)
+        self.assertIn(constants.SUBNET, lb_flow.provides)
+        self.assertIn(constants.AMPHORAE, lb_flow.provides)
+        self.assertEqual(5, len(lb_flow.provides))
 
     def test_get_post_lb_amp_association_flow(self, mock_get_net_driver):
         amp_flow = self.LBFlow.get_post_lb_amp_association_flow(

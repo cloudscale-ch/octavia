@@ -796,11 +796,14 @@ class TestControllerWorker(base.TestCase):
 
         (cw.services_controller.run_poster.
             assert_called_once_with(flow_utils.get_update_load_balancer_flow,
+                                    constants.TOPOLOGY_SINGLE,
+                                    True,
                                     store={constants.UPDATE_DICT: change,
                                            constants.LOADBALANCER:
                                                _load_balancer_mock,
                                            constants.LOADBALANCER_ID:
                                                _db_load_balancer_mock.id,
+                                           constants.AMPHORA_ID: None,
                                            }))
 
     @mock.patch('octavia.db.repositories.ListenerRepository.get_all',

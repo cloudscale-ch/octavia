@@ -356,6 +356,30 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
                     # Now try it again
                     self._delete_vip_security_group(sec_grp_id)
 
+    def _vip_port_fixed_ips(self, load_balancer):
+        fixed_ip = {}
+        if load_balancer.vip.subnet_id:
+            fixed_ip['subnet_id'] = load_balancer.vip.subnet_id
+        if load_balancer.vip.ip_address:
+            fixed_ip[constants.IP_ADDRESS] = load_balancer.vip.ip_address
+
+        fixed_ips = []
+        if fixed_ip:
+            fixed_ips.append(fixed_ip)
+
+        for add_vip in load_balancer.additional_vips:
+            add_ip = {}
+            if add_vip.subnet_id:
+                add_ip['subnet_id'] = add_vip.subnet_id
+            if add_vip.ip_address:
+                add_ip['ip_address'] = add_vip.ip_address
+            if add_ip:
+                fixed_ips.append(add_ip)
+            else:
+                LOG.warning('Additional VIP contains neither subnet_id nor '
+                            'ip_address, ignoring.')
+        return fixed_ips
+
     def deallocate_vip(self, vip):
         """Delete the vrrp_port (instance port) in case nova didn't
 
@@ -438,6 +462,16 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
             vrrp_port_id=interface.port_id,
             ha_port_id=vip.port_id)
 
+    def update_aap_port(self, load_balancer, subnet, amphora):
+        interface = self._get_plugged_interface(
+            amphora.compute_id, subnet.network_id, amphora.lb_network_ip)
+
+        aap_address_list = [load_balancer.vip.ip_address]
+        for add_vip in load_balancer.additional_vips:
+            aap_address_list.append(add_vip.ip_address)
+
+        self._add_vip_address_pairs(interface.port_id, aap_address_list)
+
     # todo (xgerman): Delete later
     def plug_vip(self, load_balancer, vip):
         self.update_vip_sg(load_balancer, vip)
@@ -517,27 +551,7 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
                     orig_msg=getattr(e, constants.MESSAGE, None),
                     orig_code=getattr(e, constants.STATUS_CODE, None),)
 
-        fixed_ip = {}
-        if load_balancer.vip.subnet_id:
-            fixed_ip['subnet_id'] = load_balancer.vip.subnet_id
-        if load_balancer.vip.ip_address:
-            fixed_ip[constants.IP_ADDRESS] = load_balancer.vip.ip_address
-
-        fixed_ips = []
-        if fixed_ip:
-            fixed_ips.append(fixed_ip)
-
-        for add_vip in load_balancer.additional_vips:
-            add_ip = {}
-            if add_vip.subnet_id:
-                add_ip['subnet_id'] = add_vip.subnet_id
-            if add_vip.ip_address:
-                add_ip['ip_address'] = add_vip.ip_address
-            if add_ip:
-                fixed_ips.append(add_ip)
-            else:
-                LOG.warning('Additional VIP contains neither subnet_id nor '
-                            'ip_address, ignoring.')
+        fixed_ips = self._vip_port_fixed_ips(load_balancer)
 
         # Make sure we are backward compatible with older neutron
         if self._check_extension_enabled(PROJECT_ID_ALIAS):
@@ -683,6 +697,17 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
             LOG.warning('VIP security group missing when updating the VIP for '
                         'delete on load balancer: %s. Skipping update '
                         'because this is for delete.', load_balancer.id)
+
+    def update_additional_vips(self, load_balancer):
+        if load_balancer.additional_vips:
+            fixed_ips = self._vip_port_fixed_ips(load_balancer)
+            self.neutron_client.update_port(
+                load_balancer.vip.port_id,
+                {constants.PORT: {constants.FIXED_IPS: fixed_ips}},
+            )
+
+        port = self.get_port(load_balancer.vip.port_id)
+        return self._port_to_vip(port, load_balancer)
 
     def failover_preparation(self, amphora):
         if self.dns_integration_enabled:
