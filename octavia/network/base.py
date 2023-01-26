@@ -387,6 +387,15 @@ class AbstractNetworkDriver(object, metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
+    def update_aap_port(self, load_balancer, subnet, amphora):
+        """Updates the AAP port on the amphora
+
+        :param load_balancer: Load Balancer to prepare the VIP for
+        :param subnet: The subnet to plug the aap into
+        :param amphora: The amphora to update the AAP port
+        """
+
+    @abc.abstractmethod
     def unplug_aap_port(self, vip, amphora, subnet):
         """Unplugs the AAP port to the amp
 

@@ -323,18 +323,57 @@ class LoadBalancerFlows(object):
                                                    listeners=listeners,
                                                    pools=pools)
 
-    def get_update_load_balancer_flow(self):
+    def get_update_load_balancer_flow(self, topology):
         """Creates a flow to update a load balancer.
 
         :returns: The flow for update a load balancer
         """
+        # TODO check if other objects than the loadbalancer have to be put into
+        # a "changing" state
         update_LB_flow = linear_flow.Flow(constants.UPDATE_LOADBALANCER_FLOW)
         update_LB_flow.add(lifecycle_tasks.LoadBalancerToErrorOnRevertTask(
             requires=constants.LOADBALANCER))
+
+        # allocate VIP
+        # TODO: Skip the additional VIP taks if the additional VIPs did not
+        #       change. If this skips get_create_all_listeners, then the
+        #       amphora_driver_tasks.ListenersUpdate has to be added back.
+        update_LB_flow.add(network_tasks.UpdateAdditionalVIPs(
+            requires=constants.LOADBALANCER,
+            provides=(constants.VIP, constants.ADDITIONAL_VIPS)))
+        update_LB_flow.add(database_tasks.UpdateAdditionalVIPsAfterAllocation(
+            requires=(constants.LOADBALANCER_ID, constants.ADDITIONAL_VIPS),
+            provides=constants.LOADBALANCER))
+        update_LB_flow.add(network_tasks.UpdateVIPSecurityGroup(
+            requires=constants.LOADBALANCER_ID))
+        update_LB_flow.add(network_tasks.GetSubnetFromVIP(
+            requires=constants.LOADBALANCER,
+            provides=constants.SUBNET))
+        update_LB_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
+            requires=constants.LOADBALANCER_ID,
+            provides=constants.AMPHORAE))
+        update_LB_flow.add(network_tasks.UpdateVIPAmphorae(
+            requires=(constants.LOADBALANCER,
+                      constants.SUBNET,
+                      constants.AMPHORAE)))
+        update_LB_flow.add(network_tasks.GetAmphoraeNetworkConfigs(
+            requires=constants.LOADBALANCER_ID,
+            provides=constants.AMPHORAE_NETWORK_CONFIG))
+        update_LB_flow.add(amphora_driver_tasks.AmphoraePostVIPPlug(
+            requires=(constants.LOADBALANCER,
+                      constants.AMPHORAE_NETWORK_CONFIG)))
+
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            vrrp_subflow = self.amp_flows.get_vrrp_subflow(
+                'update_vip',
+                create_vrrp_group=False,
+            )
+            update_LB_flow.add(vrrp_subflow)
+
+        update_LB_flow.add(self.listener_flows.get_create_all_listeners_flow())
+
         update_LB_flow.add(network_tasks.ApplyQos(
             requires=(constants.LOADBALANCER, constants.UPDATE_DICT)))
-        update_LB_flow.add(amphora_driver_tasks.ListenersUpdate(
-            requires=constants.LOADBALANCER_ID))
         update_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
         update_LB_flow.add(database_tasks.MarkLBActiveInDB(

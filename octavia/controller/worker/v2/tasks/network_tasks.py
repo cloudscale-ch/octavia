@@ -592,6 +592,19 @@ class PlugVIPAmphora(BaseNetworkTask):
                       'use for VIP: %s due to error: %s', db_lb.vip, str(e))
 
 
+class UpdateVIPAmphorae(BaseNetworkTask):
+    """Task to update the vip configuration on all amphorae."""
+
+    def execute(self, loadbalancer, subnet, amphorae):
+        db_lb = self.loadbalancer_repo.get(
+            db_apis.get_session(), id=loadbalancer[constants.LOADBALANCER_ID])
+        db_subnet = self.network_driver.get_subnet(subnet[constants.ID])
+        for amp in amphorae:
+            db_amp = self.amphora_repo.get(db_apis.get_session(),
+                                           id=amp.get(constants.ID))
+            self.network_driver.update_aap_port(db_lb, db_subnet, db_amp)
+
+
 class UnplugVIP(BaseNetworkTask):
     """Task to unplug the vip."""
 
@@ -655,6 +668,26 @@ class AllocateVIP(BaseNetworkTask):
                       {'vip': vip.ip_address, 'except': str(e)})
 
 
+class UpdateAdditionalVIPs(BaseNetworkTask):
+    """Task to update additional VIPs on a VIP port."""
+
+    def execute(self, loadbalancer):
+        """Update additional VIPs"""
+
+        db_lb = self.loadbalancer_repo.get(
+            db_apis.get_session(),
+            id=loadbalancer[constants.LOADBALANCER_ID])
+
+        vip, additional_vips = self.network_driver.update_additional_vips(db_lb)
+
+        for add_vip in additional_vips:
+            LOG.debug('Allocated an additional VIP: %s', add_vip.to_dict())
+
+        return (vip.to_dict(),
+                [additional_vip.to_dict()
+                 for additional_vip in additional_vips])
+
+
 class AllocateVIPforFailover(AllocateVIP):
     """Task to allocate/validate the VIP for a failover flow."""
 
@@ -690,7 +723,7 @@ class DeallocateVIP(BaseNetworkTask):
 
 
 class UpdateVIP(BaseNetworkTask):
-    """Task to update a VIP."""
+    """Task to update a VIP for listener update flows."""
 
     def execute(self, listeners):
         loadbalancer = self.loadbalancer_repo.get(
@@ -755,6 +788,7 @@ class GetAmphoraeNetworkConfigs(BaseNetworkTask):
         db_configs = self.network_driver.get_network_configs(db_lb)
         provider_dict = {}
         for amp_id, amp_conf in db_configs.items():
+            LOG.debug('Amphora %s network config: %s', amp_id, amp_conf.to_dict(recurse=True))
             provider_dict[amp_id] = amp_conf.to_dict(recurse=True)
         return provider_dict
 

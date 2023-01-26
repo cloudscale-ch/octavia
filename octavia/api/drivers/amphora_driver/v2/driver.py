@@ -164,7 +164,7 @@ class AmphoraProviderDriver(driver_base.ProviderDriver):
 
     def loadbalancer_update(self, original_load_balancer, new_loadbalancer):
         # Adapt the provider data model to the queue schema
-        lb_dict = new_loadbalancer.to_dict()
+        lb_dict = new_loadbalancer.to_dict(recurse=True)
         if 'admin_state_up' in lb_dict:
             lb_dict['enabled'] = lb_dict.pop('admin_state_up')
         # Put the qos_policy_id back under the vip element the controller
@@ -178,6 +178,7 @@ class AmphoraProviderDriver(driver_base.ProviderDriver):
         payload = {consts.ORIGINAL_LOADBALANCER:
                    original_load_balancer.to_dict(),
                    consts.LOAD_BALANCER_UPDATES: lb_dict}
+        LOG.debug('Calling update_load_balancer with %s', payload)
         self.client.cast({}, 'update_load_balancer', **payload)
 
     def _encrypt_tls_container_data(self, tls_container_data):

@@ -224,12 +224,15 @@ class LoadBalancersController(base.BaseController):
                 "specify either a VIP subnet or address."))
 
     @staticmethod
-    def _validate_subnets_share_network_but_no_duplicates(load_balancer):
+    def _validate_subnets_share_network_but_no_duplicates(load_balancer,
+                                                          subnet_id=None):
         # Validate that all subnets belong to the same network
         network_driver = utils.get_network_driver()
+        if not subnet_id:
+            subnet_id = load_balancer.vip_subnet_id
         subnet_network_map = {
-            load_balancer.vip_subnet_id:
-            network_driver.get_subnet(load_balancer.vip_subnet_id).network_id
+            subnet_id:
+            network_driver.get_subnet(subnet_id).network_id
         }
 
         for vip in load_balancer.additional_vips:
@@ -698,6 +701,16 @@ class LoadBalancersController(base.BaseController):
                 if db_lb.vip.qos_policy_id != load_balancer.vip_qos_policy_id:
                     validate.qos_policy_exists(load_balancer.vip_qos_policy_id)
 
+        # Multi-vip validation for ensuring subnets are "sane"
+        # TODO: Apparently there is no validation of the IP before the request
+        # ends. This only fails later...
+        # Validation seems to work in the POST case
+        if not isinstance(load_balancer.additional_vips, wtypes.UnsetType):
+            self._validate_subnets_share_network_but_no_duplicates(
+                load_balancer,
+                subnet_id=db_lb.vip.subnet_id,
+            )
+
         # Load the driver early as it also provides validation
         driver = driver_factory.get_driver(db_lb.provider)
 
@@ -706,6 +719,7 @@ class LoadBalancersController(base.BaseController):
 
             # Prepare the data for the driver data model
             lb_dict = load_balancer.to_dict(render_unsets=False)
+
             lb_dict['id'] = id
             vip_dict = lb_dict.pop('vip', {})
             lb_dict = driver_utils.lb_dict_to_provider_dict(lb_dict)
@@ -719,7 +733,7 @@ class LoadBalancersController(base.BaseController):
 
             # Dispatch to the driver
             LOG.info("Sending update Load Balancer %s to provider "
-                     "%s", id, driver.name)
+                     "%s with %s", id, driver.name, lb_dict)
             driver_utils.call_provider(
                 driver.name, driver.loadbalancer_update,
                 old_provider_lb,
@@ -729,6 +743,38 @@ class LoadBalancersController(base.BaseController):
             if 'vip' in db_lb_dict:
                 db_vip_dict = db_lb_dict.pop('vip')
                 self.repositories.vip.update(lock_session, id, **db_vip_dict)
+
+            if 'additional_vips' in db_lb_dict:
+                old_additional_vips = {
+                    (vip.subnet_id, vip.ip_address): vip.to_dict()
+                    for vip in db_lb.additional_vips
+                }
+                new_additional_vips = {
+                    (vip['subnet_id'], vip['ip_address']): vip
+                    for vip in db_lb_dict.pop('additional_vips')
+                }
+                LOG.debug('old additional vips: %s, new additional vips: %s',
+                          old_additional_vips, new_additional_vips)
+                for vip in (new_additional_vips.keys()
+                            - old_additional_vips.keys()):
+                    LOG.debug('Adding additional vip %s',
+                              new_additional_vips[vip])
+                    add_vip = self.repositories.additional_vip.create(
+                        lock_session,
+                        load_balancer_id=id,
+                        **new_additional_vips[vip],
+                    )
+                for vip in (old_additional_vips.keys()
+                            - new_additional_vips.keys()):
+                    LOG.debug('Removing additional vip %s',
+                              old_additional_vips[vip])
+                    self.repositories.additional_vip.delete(
+                        lock_session,
+                        load_balancer_id=id,
+                        subnet_id=old_additional_vips[vip]['subnet_id'],
+                        ip_address=old_additional_vips[vip]['ip_address'],
+                    )
+
             if db_lb_dict:
                 self.repositories.load_balancer.update(lock_session, id,
                                                        **db_lb_dict)

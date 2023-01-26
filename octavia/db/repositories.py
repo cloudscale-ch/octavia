@@ -953,6 +953,8 @@ class AdditionalVipRepository(BaseRepository):
         Uses load_balancer_id + subnet_id + ip_address.
         """
         with session.begin(subtransactions=True):
+            LOG.debug('Updating additional VIP with (%s, %s, %s): %s',
+                      load_balancer_id, subnet_id, ip_address, model_kwargs)
             session.query(self.model_class).filter_by(
                 load_balancer_id=load_balancer_id,
                 subnet_id=subnet_id,

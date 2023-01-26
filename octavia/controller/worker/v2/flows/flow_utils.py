@@ -73,8 +73,8 @@ def get_cascade_delete_load_balancer_flow(lb, listeners=(), pools=()):
                                                           pools)
 
 
-def get_update_load_balancer_flow():
-    return LB_FLOWS.get_update_load_balancer_flow()
+def get_update_load_balancer_flow(topology):
+    return LB_FLOWS.get_update_load_balancer_flow(topology)
 
 
 def get_create_amphora_flow():
