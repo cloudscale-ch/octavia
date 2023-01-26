@@ -446,7 +446,10 @@ class AmphoraePostVIPPlug(BaseAmphoraTask):
         with session.begin():
             db_lb = self.loadbalancer_repo.get(
                 session, id=loadbalancer[constants.LOADBALANCER_ID])
-        for amphora in db_lb.amphorae:
+        for amphora in filter(
+                lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
+                db_lb.amphorae
+        ):
             amp_post_vip_plug.execute(amphora.to_dict(),
                                       loadbalancer,
                                       amphorae_network_config)
