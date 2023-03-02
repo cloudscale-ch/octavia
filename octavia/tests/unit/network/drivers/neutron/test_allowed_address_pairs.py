@@ -875,7 +875,6 @@ class TestAllowedAddressPairsDriver(base.TestCase):
                 'fixed_ips': [
                     {'ip_address': t_constants.MOCK_IP_ADDRESS,
                      'subnet_id': t_constants.MOCK_SUBNET_ID},
-                    {'ip_address': t_constants.MOCK_IP_ADDRESS2},
                     {'subnet_id': t_constants.MOCK_SUBNET_ID3}]
             }
         }
@@ -885,7 +884,12 @@ class TestAllowedAddressPairsDriver(base.TestCase):
         self.assertEqual(t_constants.MOCK_SUBNET_ID, vip.subnet_id)
         self.assertEqual(t_constants.MOCK_PORT_ID, vip.port_id)
         self.assertEqual(fake_lb.id, vip.load_balancer_id)
-        self.assertFalse(additional_vips)
+        self.assertEqual(
+            [data_models.AdditionalVip(
+                ip_address=t_constants.MOCK_IP_ADDRESS2,
+            )],
+            additional_vips,
+        )
 
     @mock.patch("time.time")
     @mock.patch("time.sleep")
