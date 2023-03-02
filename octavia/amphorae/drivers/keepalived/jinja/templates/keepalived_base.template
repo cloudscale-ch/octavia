@@ -56,7 +56,9 @@ vrrp_instance {{ vrrp_group_name }} {
 
     virtual_routes {
 {% for vip in vips %}
+    {% if vip.network_cidr %}
         {{ vip.network_cidr }} dev {{ amp_intf }} src {{ vip.ip_address }} scope link table 1
+    {% endif %}
     {% if vip.gateway %}
         default via {{ vip.gateway }} dev {{ amp_intf }} onlink table 1
     {% endif %}

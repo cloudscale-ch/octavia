@@ -235,7 +235,8 @@ class LoadBalancersController(base.BaseController):
         }
 
         for vip in load_balancer.additional_vips:
-            if vip.subnet_id not in subnet_network_map:
+            if not (isinstance(vip.subnet_id, wtypes.UnsetType) or
+                    vip.subnet_id in subnet_network_map):
                 subnet_network_map[vip.subnet_id] = network_driver.get_subnet(
                     vip.subnet_id).network_id
 
@@ -245,7 +246,8 @@ class LoadBalancersController(base.BaseController):
             ))
         # Fill the network_id for each additional_vip
         for vip in load_balancer.additional_vips:
-            vip.network_id = subnet_network_map[vip.subnet_id]
+            if vip.subnet_id:
+                vip.network_id = subnet_network_map[vip.subnet_id]
 
     def _validate_vip_request_object(self, load_balancer, context=None):
         allowed_network_objects = []
@@ -748,7 +750,7 @@ class LoadBalancersController(base.BaseController):
                     for vip in db_lb.additional_vips
                 }
                 new_additional_vips = {
-                    (vip['subnet_id'], vip.get('ip_address')): vip
+                    (vip.get('subnet_id'), vip.get('ip_address')): vip
                     for vip in db_lb_dict.pop('additional_vips')
                 }
                 LOG.debug('old additional vips: %s, new additional vips: %s',

@@ -373,7 +373,12 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
                 add_ip['subnet_id'] = add_vip.subnet_id
             if add_vip.ip_address:
                 add_ip['ip_address'] = add_vip.ip_address
-            if add_ip:
+
+            if 'subnet_id' not in add_ip and 'ip_address' in add_ip:
+                LOG.debug('Skipping VIP %s without subnet. Cannot add to VIP '
+                          'port %s.',
+                          add_ip['ip_address'], load_balancer.vip.port_id)
+            elif add_ip:
                 fixed_ips.append(add_ip)
             else:
                 LOG.warning('Additional VIP contains neither subnet_id nor '
@@ -782,7 +787,10 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
 
             additional_vip_data = []
             for add_vip in additional_vips:
-                add_vip_subnet = self.get_subnet(add_vip.subnet_id)
+                if add_vip.subnet_id:
+                    add_vip_subnet = self.get_subnet(add_vip.subnet_id)
+                else:
+                    add_vip_subnet = None
                 add_vip_data = n_data_models.AdditionalVipData(
                     ip_address=add_vip.ip_address,
                     subnet=add_vip_subnet
