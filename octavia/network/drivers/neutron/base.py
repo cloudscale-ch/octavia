@@ -104,6 +104,13 @@ class BaseNeutronDriver(base.AbstractNetworkDriver):
                 load_balancer=load_balancer,
                 load_balancer_id=load_balancer.id)
             for add_fixed_ip in additional_ips]
+
+        # VIPs without a subnet (Floating IPs)
+        for vip in load_balancer.additional_vips:
+            if vip.subnet_id:
+                continue
+            additional_vips.append(vip)
+
         return primary_vip, additional_vips
 
     def _nova_interface_to_octavia_interface(self, compute_id, nova_interface):

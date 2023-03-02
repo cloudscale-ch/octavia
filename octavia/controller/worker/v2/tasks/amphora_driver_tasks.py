@@ -380,10 +380,13 @@ class AmphoraPostVIPPlug(BaseAmphoraTask):
                 amphora[constants.ID]]['additional_vip_data']:
 
             subnet_arg = copy.deepcopy(add_vip['subnet'])
-            subnet_arg['host_routes'] = [
-                data_models.HostRoute(**hr)
-                for hr in subnet_arg['host_routes']]
-            subnet = data_models.Subnet(**subnet_arg)
+            if subnet_arg:
+                subnet_arg['host_routes'] = [
+                    data_models.HostRoute(**hr)
+                    for hr in subnet_arg['host_routes']]
+                subnet = data_models.Subnet(**subnet_arg)
+            else:
+                subnet = None
 
             additional_vip_data.append(
                 data_models.AdditionalVipData(
