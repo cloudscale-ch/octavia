@@ -36,7 +36,7 @@ class BaseLoadBalancerType(types.BaseType):
 
 class AdditionalVipsType(types.BaseType):
     """Type for additional vips"""
-    subnet_id = wtypes.wsattr(wtypes.UuidType(), mandatory=True)
+    subnet_id = wtypes.wsattr(wtypes.UuidType())
     ip_address = wtypes.wsattr(types.IPAddressType())
 
 
