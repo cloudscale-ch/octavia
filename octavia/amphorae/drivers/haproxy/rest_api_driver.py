@@ -14,6 +14,7 @@
 # under the License.
 import functools
 import hashlib
+import ipaddress
 import os
 import ssl
 import time
@@ -378,13 +379,24 @@ class HaproxyAmphoraLoadBalancerDriver(
                 port, amphora.to_dict(),
                 vip_subnet.to_dict(recurse=True), mtu, sriov)
             for add_vip in additional_vip_data:
-                add_host_routes = [{'nexthop': hr.nexthop,
-                                    'destination': hr.destination}
-                                   for hr in add_vip.subnet.host_routes]
-                add_net_info = {'subnet_cidr': add_vip.subnet.cidr,
-                                'ip_address': add_vip.ip_address,
-                                'gateway': add_vip.subnet.gateway_ip,
-                                'host_routes': add_host_routes}
+                if add_vip.subnet:
+                    add_host_routes = [{'nexthop': hr.nexthop,
+                                        'destination': hr.destination}
+                                       for hr in add_vip.subnet.host_routes]
+                    add_net_info = {'subnet_cidr': add_vip.subnet.cidr,
+                                    'ip_address': add_vip.ip_address,
+                                    'gateway': add_vip.subnet.gateway_ip,
+                                    'host_routes': add_host_routes}
+                else:
+                    ip_version = ipaddress.ip_address(
+                        add_vip.ip_address).version
+                    add_net_info = {'subnet_cidr': '%s/%s'
+                                    % (add_vip.ip_address, ip_version == 4 and
+                                       32 or 128),
+                                    'ip_address': add_vip.ip_address,
+                                    'gateway': None,
+                                    'host_routes': []}
+
                 net_info['additional_vips'].append(add_net_info)
             try:
                 self.clients[amphora.api_version].plug_vip(
