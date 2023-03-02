@@ -356,10 +356,13 @@ class AmphoraPostVIPPlug(BaseAmphoraTask):
                 amphora[constants.ID]]['additional_vip_data']:
 
             subnet_arg = copy.deepcopy(add_vip['subnet'])
-            subnet_arg['host_routes'] = [
-                data_models.HostRoute(**hr)
-                for hr in subnet_arg['host_routes']]
-            subnet = data_models.Subnet(**subnet_arg)
+            if subnet_arg:
+                subnet_arg['host_routes'] = [
+                    data_models.HostRoute(**hr)
+                    for hr in subnet_arg['host_routes']]
+                subnet = data_models.Subnet(**subnet_arg)
+            else:
+                subnet = None
 
             additional_vip_data.append(
                 data_models.AdditionalVipData(
@@ -486,7 +489,7 @@ class AmphoraVRRPUpdate(BaseAmphoraTask):
         except Exception as e:
             LOG.error('Failed to update VRRP configuration amphora %s. '
                       'Skipping this amphora as it is failing to update due '
-                      'to: %s', amphora_id, str(e))
+                      'to: %s', amphora_id, str(e), exc_info=e)
             self.amphora_repo.update(db_apis.get_session(), amphora_id,
                                      status=constants.ERROR)
 
@@ -516,7 +519,7 @@ class AmphoraIndexVRRPUpdate(BaseAmphoraTask):
         except Exception as e:
             LOG.error('Failed to update VRRP configuration amphora %s. '
                       'Skipping this amphora as it is failing to update due '
-                      'to: %s', amphora_id, str(e))
+                      'to: %s', amphora_id, str(e), exc_info=e)
             self.amphora_repo.update(db_apis.get_session(), amphora_id,
                                      status=constants.ERROR)
             return

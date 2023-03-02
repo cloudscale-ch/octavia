@@ -323,7 +323,7 @@ class LoadBalancerFlows(object):
                                                    listeners=listeners,
                                                    pools=pools)
 
-    def get_update_load_balancer_flow(self, topology):
+    def get_update_load_balancer_flow(self, topology, has_listeners):
         """Creates a flow to update a load balancer.
 
         :returns: The flow for update a load balancer
@@ -356,12 +356,19 @@ class LoadBalancerFlows(object):
             requires=(constants.LOADBALANCER,
                       constants.SUBNET,
                       constants.AMPHORAE)))
-        update_LB_flow.add(network_tasks.GetAmphoraeNetworkConfigs(
-            requires=constants.LOADBALANCER_ID,
-            provides=constants.AMPHORAE_NETWORK_CONFIG))
-        update_LB_flow.add(amphora_driver_tasks.AmphoraePostVIPPlug(
-            requires=(constants.LOADBALANCER,
-                      constants.AMPHORAE_NETWORK_CONFIG)))
+        # update_LB_flow.add(network_tasks.CalculateDelta(
+        #     requires=(constants.LOADBALANCER, constants.AVAILABILITY_ZONE),
+        #     provides=constants.DELTAS))
+        # update_LB_flow.add(network_tasks.HandleNetworkDeltas(
+        #     requires=(constants.DELTAS, constants.LOADBALANCER),
+        #     provides=constants.UPDATED_PORTS))
+        # update_LB_flow.add(network_tasks.GetAmphoraeNetworkConfigs(
+        #     requires=constants.LOADBALANCER_ID,
+        #     provides=constants.AMPHORAE_NETWORK_CONFIG))
+        # update_LB_flow.add(amphora_driver_tasks.AmphoraePostNetworkPlug(
+        #     requires=(constants.LOADBALANCER,
+        #               constants.UPDATED_PORTS,
+        #               constants.AMPHORAE_NETWORK_CONFIG)))
 
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
             vrrp_subflow = self.amp_flows.get_vrrp_subflow(
@@ -370,7 +377,10 @@ class LoadBalancerFlows(object):
             )
             update_LB_flow.add(vrrp_subflow)
 
-        update_LB_flow.add(self.listener_flows.get_create_all_listeners_flow())
+        if has_listeners:
+            update_LB_flow.add(
+                self.listener_flows.get_create_all_listeners_flow()
+            )
 
         update_LB_flow.add(network_tasks.ApplyQos(
             requires=(constants.LOADBALANCER, constants.UPDATE_DICT)))

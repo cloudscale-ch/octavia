@@ -124,7 +124,7 @@ class KeepalivedJinjaTemplater(object):
                 'network_cidr': vip_network_cidr,
                 'ipv6': vip_ipv6,
                 'interface_index': index,
-                'gateway': add_vip['subnet']['gateway_ip'],
+                'gateway': add_vip['subnet'] and add_vip['subnet']['gateway_ip'] or None,
                 'excluded': vip_ipv6 != vrrp_ipv6,
                 'host_routes': host_routes
             })

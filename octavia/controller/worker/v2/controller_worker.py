@@ -417,11 +417,19 @@ class ControllerWorker(object):
                  constants.LOADBALANCER_ID:
                      original_load_balancer[constants.LOADBALANCER_ID],
                  constants.UPDATE_DICT: load_balancer_updates}
+        # if db_lb.availability_zone:
+        #     store[constants.AVAILABILITY_ZONE] = (
+        #         self._az_repo.get_availability_zone_metadata_dict(
+        #             db_apis.get_session(),
+        #             db_lb.availability_zone))
+        # else:
+        #     store[constants.AVAILABILITY_ZONE] = {}
 
         LOG.debug('Running update load balancer flow with "%s"', store)
         self.run_flow(
             flow_utils.get_update_load_balancer_flow,
             db_lb.topology,
+            len(db_lb.listeners) > 0,
             store=store)
 
     @tenacity.retry(
