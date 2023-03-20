@@ -953,13 +953,31 @@ class AdditionalVipRepository(BaseRepository):
         Uses load_balancer_id + subnet_id + ip_address.
         """
         with session.begin(subtransactions=True):
-            LOG.debug('Updating additional VIP with (%s, %s, %s): %s',
+            LOG.debug('Updating additional VIP (%s, %s, %s) with %s',
                       load_balancer_id, subnet_id, ip_address, model_kwargs)
-            session.query(self.model_class).filter_by(
+            query = session.query(self.model_class).filter_by(
                 load_balancer_id=load_balancer_id,
                 subnet_id=subnet_id,
                 ip_address=ip_address,
-            ).update(model_kwargs)
+            )
+            if query.count() == 0 and subnet_id:
+                # Maybe we are trying to update the ip_address from None to
+                # address assigned during port creation.
+                query = session.query(self.model_class).filter_by(
+                    load_balancer_id=load_balancer_id,
+                    subnet_id=subnet_id,
+                    ip_address=None,
+                )
+            if query.count() == 0:
+                raise exceptions.NotFound(
+                    load_balancer_id=load_balancer_id,
+                    subnet_id=subnet_id,
+                    ip_address=ip_address,
+                )
+
+            # Also update the IP address it might have changed
+            model_kwargs['ip_address'] = ip_address
+            query.update(model_kwargs)
 
 
 class HealthMonitorRepository(BaseRepository):
