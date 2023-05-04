@@ -410,8 +410,11 @@ class HealthMonitorController(base.BaseController):
 
         self._auth_validate_action(context, project_id, consts.RBAC_DELETE)
 
-        if db_hm.provisioning_status == consts.DELETED:
-            return
+        if db_hm.provisioning_status not in consts.DELETABLE_STATUSES:
+            raise exceptions.ImmutableObject(
+                resource='Healthmonitor',
+                id=db_hm.id,
+            )
 
         # Load the driver early as it also provides validation
         driver = driver_factory.get_driver(provider)
