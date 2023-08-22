@@ -81,8 +81,7 @@ class BaseDatabaseTask(task.Task):
             self.amp_health_repo.update(session,
                                         amphora_id=amphora_id,
                                         busy=True)
-        except (sqlalchemy.orm.exc.NoResultFound,
-                sqlalchemy.orm.exc.UnmappedInstanceError):
+        except exceptions.NotFound:
             LOG.debug('No existing amphora health record to mark busy '
                       'for amphora: %s, skipping.', amphora_id)
 
