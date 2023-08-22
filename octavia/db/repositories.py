@@ -112,8 +112,11 @@ class BaseRepository(object):
         if tags is not None:
             resource = session.get(self.model_class, id)
             resource.tags = tags
-        session.query(self.model_class).filter_by(
-            id=id).update(model_kwargs)
+        (session.query(self.model_class)
+         .filter_by(id=id)
+         .populate_existing()
+         .with_for_update()
+         .update(model_kwargs))
 
     def get(self, session, **filters):
         """Retrieves an entity from the database.
@@ -789,8 +792,11 @@ class VipRepository(BaseRepository):
 
     def update(self, session, load_balancer_id, **model_kwargs):
         """Updates a vip entity in the database by load_balancer_id."""
-        session.query(self.model_class).filter_by(
-            load_balancer_id=load_balancer_id).update(model_kwargs)
+        (session.query(self.model_class)
+         .filter_by(load_balancer_id=load_balancer_id)
+         .populate_existing()
+         .with_for_update()
+         .update(model_kwargs))
 
 
 class AdditionalVipRepository(BaseRepository):
@@ -809,7 +815,7 @@ class AdditionalVipRepository(BaseRepository):
             load_balancer_id=load_balancer_id,
             subnet_id=subnet_id,
             ip_address=ip_address,
-        )
+        ).populate_existing().with_for_update()
 
         if query.count() == 0 and subnet_id:
             # Maybe we are trying to update the ip_address from None to
@@ -818,7 +824,7 @@ class AdditionalVipRepository(BaseRepository):
                 load_balancer_id=load_balancer_id,
                 subnet_id=subnet_id,
                 ip_address=None,
-            )
+            ).populate_existing().with_for_update()
 
             # Also update the IP address
             model_kwargs['ip_address'] = ip_address
@@ -866,13 +872,16 @@ class SessionPersistenceRepository(BaseRepository):
 
     def update(self, session, pool_id, **model_kwargs):
         """Updates a session persistence entity in the database by pool_id."""
-        session.query(self.model_class).filter_by(
-            pool_id=pool_id).update(model_kwargs)
+        (session.query(self.model_class)
+         .filter_by(pool_id=pool_id)
+         .populate_existing()
+         .with_for_update()
+         .update(model_kwargs))
 
     def exists(self, session, pool_id):
         """Checks if session persistence exists on a pool."""
         return bool(session.query(self.model_class).filter_by(
-            pool_id=pool_id).first())
+            pool_id=pool_id).populate_existing().with_for_update().first())
 
 
 class ListenerCidrRepository(BaseRepository):
@@ -978,8 +987,11 @@ class MemberRepository(BaseRepository):
         :param model_kwargs: Entity attributes that should be updates.
         :returns: octavia.common.data_model
         """
-        session.query(self.model_class).filter_by(
-            pool_id=pool_id).update(model_kwargs)
+        (session.query(self.model_class)
+         .filter_by(pool_id=pool_id)
+         .populate_existing()
+         .with_for_update()
+         .update(model_kwargs))
 
 
 class ListenerRepository(BaseRepository):
@@ -1051,8 +1063,11 @@ class ListenerRepository(BaseRepository):
         return bool(listener.default_pool)
 
     def update(self, session, id, **model_kwargs):
-        listener_db = session.query(self.model_class).filter_by(
-            id=id).first()
+        listener_db = (session.query(self.model_class)
+                       .filter_by(id=id)
+                       .populate_existing()
+                       .with_for_update()
+                       .first())
         if not listener_db:
             raise exceptions.NotFound(
                 resource=data_models.Listener._name(), id=id)
@@ -1106,6 +1121,8 @@ class ListenerRepository(BaseRepository):
     def prov_status_active_if_not_error(self, session, listener_id):
         """Update provisioning_status to ACTIVE if not already in ERROR."""
         (session.query(self.model_class).filter_by(id=listener_id).
+         populate_existing().
+         with_for_update().
          # Don't mark ERROR or already ACTIVE as ACTIVE
          filter(~self.model_class.provisioning_status.in_(
              [consts.ERROR, consts.ACTIVE])).
@@ -1145,9 +1162,12 @@ class ListenerStatisticsRepository(BaseRepository):
             stats_obj.amphora_id = stats_obj.listener_id
 
         # TODO(johnsom): This can be simplified/optimized using an "upsert"
-        count = session.query(self.model_class).filter_by(
-            listener_id=stats_obj.listener_id,
-            amphora_id=stats_obj.amphora_id).count()
+        count = (session.query(self.model_class)
+                 .filter_by(listener_id=stats_obj.listener_id,
+                            amphora_id=stats_obj.amphora_id)
+                 .populate_existing()
+                 .with_for_update()
+                 .count())
         if count:
             session.query(self.model_class).filter_by(
                 listener_id=stats_obj.listener_id,
@@ -1195,8 +1215,11 @@ class ListenerStatisticsRepository(BaseRepository):
         :param model_kwargs: Entity attributes that should be updated
 
         """
-        session.query(self.model_class).filter_by(
-            listener_id=listener_id).update(model_kwargs)
+        (session.query(self.model_class)
+         .filter_by(listener_id=listener_id)
+         .populate_existing()
+         .with_for_update()
+         .update(model_kwargs))
 
 
 class AmphoraRepository(BaseRepository):
@@ -1232,10 +1255,16 @@ class AmphoraRepository(BaseRepository):
         :param load_balancer_id: The load balancer id to associate
         :param amphora_id: The amphora id to associate
         """
-        load_balancer = session.query(models.LoadBalancer).filter_by(
-            id=load_balancer_id).first()
-        amphora = session.query(self.model_class).filter_by(
-            id=amphora_id).first()
+        load_balancer = (session.query(models.LoadBalancer)
+                         .filter_by(id=load_balancer_id)
+                         .populate_existing()
+                         .with_for_update()
+                         .first())
+        amphora = (session.query(self.model_class)
+                   .filter_by(id=amphora_id)
+                   .populate_existing()
+                   .with_for_update()
+                   .first())
         load_balancer.amphorae.append(amphora)
 
     @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
@@ -1441,6 +1470,8 @@ class AmphoraBuildReqRepository(BaseRepository):
         """Updates the request status."""
         (session.query(self.model_class)
          .filter_by(amphora_id=amphora_id)
+         .populate_existing()
+         .with_for_update()
          .update({self.model_class.status: 'BUILDING'}))
 
     def get_highest_priority_build_req(self, session):
@@ -1477,16 +1508,28 @@ class AmphoraBuildSlotsRepository(BaseRepository):
     def update_count(self, session, action='increment'):
         """Increments/Decrements/Resets the number of build_slots used."""
         if action == 'increment':
-            session.query(self.model_class).filter_by(id=1).update(
-                {self.model_class.slots_used:
-                 self.get_used_build_slots_count(session) + 1})
+            (session.query(self.model_class)
+             .filter_by(id=1)
+             .populate_existing()
+             .with_for_update()
+             .update(
+                 {self.model_class.slots_used:
+                  self.get_used_build_slots_count(session) + 1}))
         elif action == 'decrement':
-            session.query(self.model_class).filter_by(id=1).update(
+            (session.query(self.model_class)
+             .filter_by(id=1)
+             .populate_existing()
+             .with_for_update()
+             .update(
                 {self.model_class.slots_used:
-                 self.get_used_build_slots_count(session) - 1})
+                 self.get_used_build_slots_count(session) - 1}))
         elif action == 'reset':
-            session.query(self.model_class).filter_by(id=1).update(
-                {self.model_class.slots_used: 0})
+            (session.query(self.model_class)
+             .filter_by(id=1)
+             .populate_existing()
+             .with_for_update()
+             .update(
+                {self.model_class.slots_used: 0}))
 
 
 class SNIRepository(BaseRepository):
@@ -1498,11 +1541,17 @@ class SNIRepository(BaseRepository):
         if not listener_id and tls_container_id:
             raise exceptions.MissingArguments
         if listener_id:
-            session.query(self.model_class).filter_by(
-                listener_id=listener_id).update(model_kwargs)
+            (session.query(self.model_class)
+             .filter_by(listener_id=listener_id)
+             .populate_existing()
+             .with_for_update()
+             .update(model_kwargs))
         elif tls_container_id:
-            session.query(self.model_class).filter_by(
-                tls_container_id=tls_container_id).update(model_kwargs)
+            (session.query(self.model_class)
+             .filter_by(tls_container_id=tls_container_id)
+             .populate_existing()
+             .with_for_update()
+             .update(model_kwargs))
 
 
 class AmphoraHealthRepository(BaseRepository):
@@ -1510,13 +1559,19 @@ class AmphoraHealthRepository(BaseRepository):
 
     def update(self, session, amphora_id, **model_kwargs):
         """Updates a healthmanager entity in the database by amphora_id."""
-        session.query(self.model_class).filter_by(
-            amphora_id=amphora_id).update(model_kwargs)
+        (session.query(self.model_class)
+         .filter_by(amphora_id=amphora_id)
+         .populate_existing()
+         .with_for_update()
+         .update(model_kwargs))
 
     def replace(self, session, amphora_id, **model_kwargs):
         """replace or insert amphora into database."""
-        count = session.query(self.model_class).filter_by(
-            amphora_id=amphora_id).count()
+        count = (session.query(self.model_class)
+                 .filter_by(amphora_id=amphora_id)
+                 .populate_existing()
+                 .with_for_update()
+                 .count())
         if count:
             session.query(self.model_class).filter_by(
                 amphora_id=amphora_id).update(model_kwargs,
@@ -1661,8 +1716,11 @@ class VRRPGroupRepository(BaseRepository):
 
     def update(self, session, load_balancer_id, **model_kwargs):
         """Updates a VRRPGroup entry for by load_balancer_id."""
-        session.query(self.model_class).filter_by(
-            load_balancer_id=load_balancer_id).update(model_kwargs)
+        (session.query(self.model_class)
+         .filter_by(load_balancer_id=load_balancer_id)
+         .populate_existing()
+         .with_for_update()
+         .update(model_kwargs))
 
 
 class L7RuleRepository(BaseRepository):
@@ -1693,8 +1751,11 @@ class L7RuleRepository(BaseRepository):
             query_options=query_options, **filters)
 
     def update(self, session, id, **model_kwargs):
-        l7rule_db = session.query(self.model_class).filter_by(
-            id=id).first()
+        l7rule_db = (session.query(self.model_class)
+                     .filter_by(id=id)
+                     .populate_existing()
+                     .with_for_update()
+                     .first())
         if not l7rule_db:
             raise exceptions.NotFound(
                 resource=data_models.L7Rule._name(), id=id)
@@ -1801,8 +1862,11 @@ class L7PolicyRepository(BaseRepository):
         return data_model_list, links
 
     def update(self, session, id, **model_kwargs):
-        l7policy_db = session.query(self.model_class).filter_by(
-            id=id).first()
+        l7policy_db = (session.query(self.model_class)
+                       .filter_by(id=id)
+                       .populate_existing()
+                       .with_for_update()
+                       .first())
         if not l7policy_db:
             raise exceptions.NotFound(
                 resource=data_models.L7Policy._name(), id=id)
@@ -1844,8 +1908,12 @@ class L7PolicyRepository(BaseRepository):
         # Position manipulation must happen outside the other alterations
         # in the previous transaction
         if position is not None:
-            listener = (session.query(models.Listener).
-                        filter_by(id=l7policy_db.listener_id).first())
+            listener = (session.query(models.Listener)
+                        .filter_by(id=l7policy_db.listener_id)
+                        .populate_existing()
+                        .with_for_update()
+                        .first())
+
             # Immediate refresh, as we have found that sqlalchemy will
             # sometimes cache the above query
             session.refresh(listener)
@@ -2079,8 +2147,11 @@ class AvailabilityZoneRepository(_GetALLExceptDELETEDIdMixin, BaseRepository):
         :param model_kwargs: Entity attributes that should be updates.
         :returns: octavia.common.data_model
         """
-        session.query(self.model_class).filter_by(
-            name=name).update(model_kwargs)
+        (session.query(self.model_class)
+         .filter_by(name=name)
+         .populate_existing()
+         .with_for_update()
+         .update(model_kwargs))
 
     def delete(self, serial_session, **filters):
         """Special delete method for availability_zone.
