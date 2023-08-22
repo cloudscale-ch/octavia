@@ -27,6 +27,7 @@ from taskflow.types import failure
 from octavia.api.drivers import utils as provider_utils
 from octavia.common import constants
 from octavia.common import data_models
+from octavia.common import exceptions
 from octavia.common.tls_utils import cert_parser
 from octavia.common import utils
 from octavia.controller.worker import task_utils as task_utilities
@@ -79,8 +80,7 @@ class BaseDatabaseTask(task.Task):
             self.amp_health_repo.update(db_apis.get_session(),
                                         amphora_id=amphora_id,
                                         busy=True)
-        except (sqlalchemy.orm.exc.NoResultFound,
-                sqlalchemy.orm.exc.UnmappedInstanceError):
+        except exceptions.NotFound:
             LOG.debug('No existing amphora health record to mark busy '
                       'for amphora: %s, skipping.', amphora_id)
 

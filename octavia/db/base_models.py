@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import re
+
 from oslo_db.sqlalchemy import models
 from oslo_utils import strutils
 from oslo_utils import uuidutils
@@ -143,6 +145,12 @@ class OctaviaBase(models.ModelBase):
         )
         params = ", ".join(f"{k}={v!r}" for k, v in params)
         return f"{self.__class__.__name__}({params})"
+
+    @classmethod
+    def _name(cls):
+        """Returns class name in a more human readable form."""
+        # Split the class name up by capitalized words
+        return ' '.join(re.findall('[A-Z][^A-Z]*', cls.__name__))
 
 
 class LookupTableMixin(object):
