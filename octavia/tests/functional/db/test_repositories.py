@@ -1992,6 +1992,11 @@ class PoolRepositoryTest(BaseRepositoryTest):
         new_pool = self.pool_repo.get(self.session, id=self.FAKE_UUID_1)
         self.assertEqual("other_pool_description", new_pool.description)
 
+    def test_update_bad_id(self):
+        self.assertRaises(exceptions.NotFound, self.pool_repo.update,
+                          self.session, uuidutils.generate_uuid(),
+                          description="other_pool_description")
+
     def test_delete(self):
         pool = self.create_pool(pool_id=self.FAKE_UUID_1,
                                 project_id=self.FAKE_UUID_2)
@@ -2190,6 +2195,11 @@ class MemberRepositoryTest(BaseRepositoryTest):
         new_member = self.member_repo.get(self.session, id=member.id)
         self.assertEqual(ip_address_change, new_member.ip_address)
 
+    def test_update_bad_id(self):
+        self.assertRaises(exceptions.NotFound, self.member_repo.update,
+                          self.session, id=uuidutils.generate_uuid(),
+                          ip_address="192.0.2.1")
+
     def test_delete(self):
         member = self.create_member(self.FAKE_UUID_1, self.FAKE_UUID_2,
                                     self.pool.id, "192.0.2.1")
@@ -2254,6 +2264,11 @@ class SessionPersistenceRepositoryTest(BaseRepositoryTest):
                             cookie_name=name_change)
         new_sp = self.sp_repo.get(self.session, pool_id=sp.pool_id)
         self.assertEqual(name_change, new_sp.cookie_name)
+
+    def test_update_bad_id(self):
+        self.assertRaises(exceptions.NotFound, self.sp_repo.update,
+                          self.session, pool_id=uuidutils.generate_uuid(),
+                          cookie_name="new_cookie_name")
 
     def test_delete(self):
         sp = self.create_session_persistence(self.pool.id)
@@ -2418,7 +2433,8 @@ class TestListenerRepositoryTest(BaseRepositoryTest):
 
     def test_update_bad_id(self):
         self.assertRaises(exceptions.NotFound, self.listener_repo.update,
-                          self.session, id=uuidutils.generate_uuid())
+                          self.session, id=uuidutils.generate_uuid(),
+                          sni_containers=[self.FAKE_UUID_2])
 
     def test_delete(self):
         listener = self.create_listener(self.FAKE_UUID_1, 80)
@@ -2621,6 +2637,10 @@ class ListenerStatisticsRepositoryTest(BaseRepositoryTest):
                                                  listener_id=stats.listener_id)
         self.assertIsInstance(new_stats, data_models.ListenerStatistics)
         self.assertEqual(stats.listener_id, new_stats.listener_id)
+
+    def test_update_bad_id(self):
+        self.assertRaises(exceptions.NotFound, self.listener_stats_repo.update,
+                          self.session, uuidutils.generate_uuid(), bytes_in=2)
 
     def test_delete(self):
         stats = self.create_listener_stats(self.listener.id, self.amphora.id)
@@ -2851,6 +2871,11 @@ class HealthMonitorRepositoryTest(BaseRepositoryTest):
         new_hm = self.hm_repo.get(self.session, id=hm.id)
         self.assertEqual(delay_change, new_hm.delay)
 
+    def test_update_bad_id(self):
+        self.assertRaises(exceptions.NotFound, self.hm_repo.update,
+                          self.session, uuidutils.generate_uuid(),
+                          delay=2)
+
     def test_delete(self):
         hm = self.create_health_monitor(self.FAKE_UUID_3, self.pool.id)
         self.hm_repo.delete(self.session, id=hm.id)
@@ -2906,6 +2931,11 @@ class LoadBalancerRepositoryTest(BaseRepositoryTest):
         self.lb_repo.update(self.session, lb.id, name=name_change)
         new_lb = self.lb_repo.get(self.session, id=lb.id)
         self.assertEqual(name_change, new_lb.name)
+
+    def test_update_bad_id(self):
+        self.assertRaises(exceptions.NotFound, self.lb_repo.update,
+                          self.session, uuidutils.generate_uuid(),
+                          name="load_balancer_name")
 
     def test_delete(self):
         lb = self.create_loadbalancer(self.FAKE_UUID_1)
@@ -3216,6 +3246,11 @@ class VipRepositoryTest(BaseRepositoryTest):
                                     load_balancer_id=vip.load_balancer_id)
         self.assertEqual(address_change, new_vip.ip_address)
 
+    def test_update_bad_id(self):
+        self.assertRaises(exceptions.NotFound, self.vip_repo.update,
+                          self.session, uuidutils.generate_uuid(),
+                          ip_address="192.0.2.2")
+
     def test_delete(self):
         vip = self.create_vip(self.lb.id)
         self.vip_repo.delete(self.session,
@@ -3282,6 +3317,11 @@ class SNIRepositoryTest(BaseRepositoryTest):
                              position=position_change)
         new_sni = self.sni_repo.get(self.session, listener_id=sni.listener_id)
         self.assertEqual(position_change, new_sni.position)
+
+    def test_update_bad_id(self):
+        self.assertRaises(exceptions.NotFound, self.sni_repo.update,
+                          self.session, listener_id=uuidutils.generate_uuid(),
+                          position=10)
 
     def test_delete(self):
         sni = self.create_sni(self.listener.id)
@@ -3367,6 +3407,11 @@ class AmphoraRepositoryTest(BaseRepositoryTest):
                                  status=status_change)
         new_amphora = self.amphora_repo.get(self.session, id=amphora.id)
         self.assertEqual(status_change, new_amphora.status)
+
+    def test_update_bad_id(self):
+        self.assertRaises(exceptions.NotFound, self.amphora_repo.update,
+                          self.session, id=uuidutils.generate_uuid(),
+                          status=constants.PENDING_UPDATE)
 
     def test_delete(self):
         amphora = self.create_amphora(self.FAKE_UUID_1)
@@ -3778,6 +3823,11 @@ class AmphoraHealthRepositoryTest(BaseRepositoryTest):
             self.session, amphora_id=amphora_health.amphora_id)
         self.assertEqual(d, new_amphora_health.last_update)
 
+    def test_update_bad_id(self):
+        self.assertRaises(exceptions.NotFound, self.amphora_health_repo.update,
+                          self.session, uuidutils.generate_uuid(),
+                          last_update=datetime.datetime.today())
+
     def test_delete(self):
         amphora_health = self.create_amphora_health(self.FAKE_UUID_1)
         self.amphora_health_repo.delete(
@@ -3980,7 +4030,10 @@ class L7PolicyRepositoryTest(BaseRepositoryTest):
 
     def test_update_bad_id(self):
         self.assertRaises(exceptions.NotFound, self.l7policy_repo.update,
-                          self.session, id=uuidutils.generate_uuid())
+                          self.session, id=uuidutils.generate_uuid(),
+                          action=constants.L7POLICY_ACTION_REDIRECT_TO_URL,
+                          redirect_url="http://www.example.com/",
+                          position=1)
 
     def test_delete(self):
         listener = self.create_listener(uuidutils.generate_uuid(), 80)
