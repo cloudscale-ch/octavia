@@ -276,6 +276,10 @@ networking_opts = [
                        "this True may allow users to access resources on "
                        "subnets they do not normally have access to via "
                        "neutron RBAC policies.")),
+    cfg.BoolOpt('allow_vip_ping', default=False,
+                help=_('Answer ICMP echo messages on VIP ports. If this is '
+                       'set, all ICMP echo requests will be answered '
+                       'regardless of allowed_cidrs set on listeners.')),
 ]
 
 health_manager_opts = [
