@@ -1347,6 +1347,59 @@ class TestAllowedAddressPairsDriver(base.TestCase):
         self.driver.update_vip(lb, for_delete=True)
         update_rules.assert_not_called()
 
+    def test_update_vip_icmp_allowed(self):
+        listeners = []
+        vip = data_models.Vip(ip_address=self.IP_ADDRESS_1)
+        additional_vips = [
+            data_models.AdditionalVip(ip_address=self.IPV6_ADDRESS_1)
+        ]
+        lb = data_models.LoadBalancer(
+            id='1',
+            listeners=listeners,
+            vip=vip,
+            additional_vips=additional_vips,
+        )
+
+        list_sec_grps = self.driver.network_proxy.find_security_group
+        list_sec_grps.return_value = {'id': 'secgrp-1'}
+        create_rule = self.driver.network_proxy.create_security_group_rule
+        expected_create_rule_ipv4 = {
+            'security_group_rule': {
+                'security_group_id': 'secgrp-1',
+                'direction': 'ingress',
+                'protocol': 'icmp',
+                'port_range_min': 8,
+                'port_range_max': None,
+                'ethertype': 'IPv4',
+                'remote_ip_prefix': None,
+            }
+        }
+        expected_create_rule_ipv6 = {
+            'security_group_rule': {
+                'security_group_id': 'secgrp-1',
+                'direction': 'ingress',
+                'protocol': 'ipv6-icmp',
+                'port_range_min': 128,
+                'port_range_max': None,
+                'ethertype': 'IPv6',
+                'remote_ip_prefix': None,
+            }
+        }
+
+        conf = oslo_fixture.Config(cfg.CONF)
+        conf.config(group="networking", allow_vip_ping=True)
+
+        self.driver.update_vip(lb)
+
+        # TODO(gaudenz): find out why test isolation is broken and this is
+        # needed.
+        conf.config(group="networking", allow_vip_ping=False)
+
+        create_rule.assert_has_calls([
+            mock.call(**expected_create_rule_ipv4),
+            mock.call(**expected_create_rule_ipv6),
+        ], any_order=True)
+
     def test_failover_preparation(self):
         original_dns_integration_state = self.driver.dns_integration_enabled
         self.driver.dns_integration_enabled = False
