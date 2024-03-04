@@ -261,6 +261,28 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
             except Exception as e:
                 raise base.PlugVIPException(str(e))
 
+        if CONF.networking.allow_vip_ping:
+            for ethertype in ethertypes:
+                try:
+                    self._create_security_group_rule(
+                        sec_grp_id,
+                        (ethertype == 'IPv4' and
+                         constants.IPV4_ICMP or constants.IPV6_ICMP),
+                        direction='ingress',
+                        ethertype=ethertype,
+                        # For ICMP this is the ICMP type. See Neutron API docs.
+                        port_min=(
+                            ethertype == 'IPv4' and
+                            constants.ICMPV4_ECHO_REQUEST or
+                            constants.ICMPV6_ECHO_REQUEST
+                        ),
+                    )
+                except os_exceptions.ConflictException:
+                    # It's ok if this rule already exists
+                    pass
+                except Exception as e:
+                    raise base.PlugVIPException(str(e))
+
     def _add_vip_security_group_to_port(self, load_balancer_id, port_id,
                                         sec_grp_id=None):
         sec_grp_id = (sec_grp_id or

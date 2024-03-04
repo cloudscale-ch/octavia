@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Amphora based load balancers can now be configured to respond to
+    ICMP echo requests (ping) packets. This feature is off by default
+    and can be enabled by setting the allow_vip_ping option in the
+    [networking] section to true.
