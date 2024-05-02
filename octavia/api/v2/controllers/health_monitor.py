@@ -418,6 +418,10 @@ class HealthMonitorController(base.BaseController):
 
         with db_api.get_lock_session() as lock_session:
 
+            # Fetch HM again as it might have been deleted in the meantime by a
+            # concurrent request
+            db_hm = self._get_db_hm(lock_session, id, show_deleted=False)
+
             self._test_lb_and_listener_and_pool_statuses(lock_session, db_hm)
 
             self.repositories.health_monitor.update(
