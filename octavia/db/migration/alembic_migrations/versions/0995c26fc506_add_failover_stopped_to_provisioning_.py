@@ -14,7 +14,7 @@
 """Add FAILOVER_STOPPED to provisioning_status table
 
 Revision ID: 0995c26fc506
-Revises: 31f7653ded67
+Revises: ffd2766474d1
 Create Date: 2022-03-24 04:53:10.768658
 
 """
@@ -23,7 +23,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '0995c26fc506'
-down_revision = '31f7653ded67'
+down_revision = 'ffd2766474d1'
 
 
 def upgrade():
