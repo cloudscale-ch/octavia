@@ -110,7 +110,15 @@ TCP_CHECK {
         {%- set has_vip.found = True %}
     {%- endif %}
 {%- endfor %}
-{% if has_vip.found %}
+{%- set has_member = namespace(found=False) %}
+{%- if default_pool.enabled %}
+    {%- for member in default_pool.members %}
+        {%- if member.ip_version == ip_version %}
+            {%- set has_member.found = True %}
+        {%- endif %}
+    {%- endfor %}
+{%- endif %}
+{% if has_vip.found and has_member.found %}
 virtual_server_group ipv{{ ip_version }}-group {
     {% for vip in vips %}
     {% if vip.ip_version == ip_version %}
