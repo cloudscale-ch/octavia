@@ -170,10 +170,13 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
 
             if listener.allowed_cidrs:
                 for ac in listener.allowed_cidrs:
-                    port = (listener.protocol_port, protocol, ac.cidr)
+                    port = (listener.protocol_port,
+                            protocol,
+                            ac.cidr,
+                            None)
                     updated_ports.append(port)
             else:
-                port = (listener.protocol_port, protocol, None)
+                port = (listener.protocol_port, protocol, None, None)
                 updated_ports.append(port)
 
             listener_peer_ports.append(listener.peer_port)
@@ -182,11 +185,18 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
         # haproxy session synchronization, so here the security group rule
         # should be just related with tcp protocol only. To avoid adding
         # duplicate rules, peer_port info should be added if updated_ports
-        # does not have the peer_port entry with allowed_cidr 0.0.0.0/0
+        # does not have the peer_port entry with allowed_cidr 0.0.0.0/0.
+        # We also need to add the security group ID as a remote group to
+        # ensure peer traffic is only accepted from within the Listener
+        # security group
         tcp_lower = constants.PROTOCOL_TCP.lower()
         for peer_port in listener_peer_ports:
-            if (peer_port, tcp_lower, "0.0.0.0/0") not in updated_ports:
-                updated_ports.append((peer_port, tcp_lower, None))
+            # This is a strange check, we need to check the first 3 elements
+            # aren't in the updated ports list
+            # We don't actually care about the remote_group_id at thus point
+            updated_ports_filter = [(p[0], p[1], p[2]) for p in updated_ports]
+            if (peer_port, tcp_lower, "0.0.0.0/0") not in updated_ports_filter:
+                updated_ports.append((peer_port, tcp_lower, None, sec_grp_id))
 
         # Just going to use port_range_max for now because we can assume that
         # port_range_max and min will be the same since this driver is
@@ -201,8 +211,9 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
                      lib_consts.PROTOCOL_SCTP]):
                 continue
             old_ports.append((rule.get('port_range_max'),
-                              rule.get('protocol').lower(),
-                              rule.get('remote_ip_prefix')))
+                              rule['protocol'].lower(),
+                              rule.get('remote_ip_prefix'),
+                              rule.get('remote_group_id')))
 
         add_ports = set(updated_ports) - set(old_ports)
         del_ports = set(old_ports) - set(updated_ports)
@@ -212,7 +223,8 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
                     [constants.PROTOCOL_TCP, constants.PROTOCOL_UDP,
                      lib_consts.PROTOCOL_SCTP] and
                     (rule.get('port_range_max'), rule.get('protocol'),
-                     rule.get('remote_ip_prefix')) in del_ports):
+                     rule.get('remote_ip_prefix'),
+                     rule.get('remote_group_id')) in del_ports):
                 rule_id = rule.get(constants.ID)
                 try:
                     self.neutron_client.delete_security_group_rule(rule_id)
@@ -236,6 +248,7 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
                         port_max=port_protocol[0],
                         ethertype=ethertype,
                         cidr=cidr,
+                        remote_group_id=port_protocol[3]
                     )
 
         # Currently we are using the VIP network for VRRP
@@ -246,7 +259,8 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
                     sec_grp_id,
                     constants.VRRP_PROTOCOL_NUM,
                     direction='ingress',
-                    ethertype=primary_ethertype)
+                    ethertype=primary_ethertype,
+                    remote_group_id=sec_grp_id)
             except neutron_client_exceptions.Conflict:
                 # It's ok if this rule already exists
                 pass
@@ -255,8 +269,11 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
 
             try:
                 self._create_security_group_rule(
-                    sec_grp_id, constants.AUTH_HEADER_PROTOCOL_NUMBER,
-                    direction='ingress', ethertype=primary_ethertype)
+                    sec_grp_id,
+                    constants.AUTH_HEADER_PROTOCOL_NUMBER,
+                    direction='ingress',
+                    ethertype=primary_ethertype,
+                    remote_group_id=sec_grp_id)
             except neutron_client_exceptions.Conflict:
                 # It's ok if this rule already exists
                 pass

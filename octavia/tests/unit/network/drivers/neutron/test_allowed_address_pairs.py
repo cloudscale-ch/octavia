@@ -1163,7 +1163,8 @@ class TestAllowedAddressPairsDriver(base.TestCase):
                 'port_range_min': 1024,
                 'port_range_max': 1024,
                 'ethertype': 'IPv4',
-                'remote_ip_prefix': None
+                'remote_ip_prefix': None,
+                'remote_group_id': 'secgrp-1'
             }
         }
         expected_create_rule_udp_peer = {
@@ -1174,7 +1175,8 @@ class TestAllowedAddressPairsDriver(base.TestCase):
                 'port_range_min': 1026,
                 'port_range_max': 1026,
                 'ethertype': 'IPv4',
-                'remote_ip_prefix': None
+                'remote_ip_prefix': None,
+                'remote_group_id': 'secgrp-1'
             }
         }
         expected_create_rule_2 = {
@@ -1185,7 +1187,8 @@ class TestAllowedAddressPairsDriver(base.TestCase):
                 'port_range_min': 1025,
                 'port_range_max': 1025,
                 'ethertype': 'IPv4',
-                'remote_ip_prefix': None
+                'remote_ip_prefix': None,
+                'remote_group_id': 'secgrp-1'
             }
         }
         expected_create_rule_3 = {
@@ -1196,7 +1199,8 @@ class TestAllowedAddressPairsDriver(base.TestCase):
                 'port_range_min': 443,
                 'port_range_max': 443,
                 'ethertype': 'IPv4',
-                'remote_ip_prefix': '10.0.102.0/24'
+                'remote_ip_prefix': '10.0.102.0/24',
+                'remote_group_id': None
             }
         }
         expected_create_rule_4 = {
@@ -1207,7 +1211,8 @@ class TestAllowedAddressPairsDriver(base.TestCase):
                 'port_range_min': 443,
                 'port_range_max': 443,
                 'ethertype': 'IPv4',
-                'remote_ip_prefix': '10.0.103.0/24'
+                'remote_ip_prefix': '10.0.103.0/24',
+                'remote_group_id': None
             }
         }
         expected_create_rule_5 = {
@@ -1218,7 +1223,8 @@ class TestAllowedAddressPairsDriver(base.TestCase):
                 'port_range_min': 443,
                 'port_range_max': 443,
                 'ethertype': 'IPv6',
-                'remote_ip_prefix': '2001:0DB8::/32'
+                'remote_ip_prefix': '2001:0DB8::/32',
+                'remote_group_id': None
             }
         }
         expected_create_rule_udp_1 = {
@@ -1229,7 +1235,8 @@ class TestAllowedAddressPairsDriver(base.TestCase):
                 'port_range_min': 50,
                 'port_range_max': 50,
                 'ethertype': 'IPv4',
-                'remote_ip_prefix': None
+                'remote_ip_prefix': None,
+                'remote_group_id': None
             }
         }
         expected_create_rule_udp_2 = {
@@ -1240,7 +1247,8 @@ class TestAllowedAddressPairsDriver(base.TestCase):
                 'port_range_min': 50,
                 'port_range_max': 50,
                 'ethertype': 'IPv6',
-                'remote_ip_prefix': None
+                'remote_ip_prefix': None,
+                'remote_group_id': None
             }
         }
 
