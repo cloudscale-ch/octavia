@@ -1,0 +1,9 @@
+---
+
+fixes:
+  - |
+    Fixed Bug 2133752 <https://bugs.launchpad.net/octavia/+bug/2133752>
+    Added remotre group to the peer ports with the same security group ID
+    as the LB security group. This should ensure traffic is limited to
+    within the LB. Old rules without remote groups will be updated on failover
+    of an existing LB.

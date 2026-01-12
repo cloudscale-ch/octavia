@@ -154,7 +154,8 @@ class BaseNeutronDriver(base.AbstractNetworkDriver):
     def _create_security_group_rule(self, sec_grp_id, protocol,
                                     direction='ingress', port_min=None,
                                     port_max=None, ethertype='IPv6',
-                                    cidr=None):
+                                    cidr=None,
+                                    remote_group_id=None):
         rule = {
             'security_group_id': sec_grp_id,
             'direction': direction,
@@ -163,9 +164,15 @@ class BaseNeutronDriver(base.AbstractNetworkDriver):
             'port_range_max': port_max,
             'ethertype': ethertype,
             'remote_ip_prefix': cidr,
+            'remote_group_id': remote_group_id
         }
 
         self.network_proxy.create_security_group_rule(**rule)
+
+    def _delete_security_group_rule(
+            self, sec_grp_rule_id, ignore_missing=False):
+        self.network_proxy.delete_security_group_rule(
+            sec_grp_rule_id, ignore_missing=ignore_missing)
 
     def apply_qos_on_port(self, qos_id, port_id):
         try:

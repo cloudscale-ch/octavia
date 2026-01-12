@@ -137,7 +137,8 @@ class TestBaseNeutronNetworkDriver(base.TestCase):
             port_min=3,
             port_max=4,
             ethertype=5,
-            cidr="10.0.0.0/24")
+            cidr="10.0.0.0/24",
+            remote_group_id=t_constants.MOCK_SECURITY_GROUP_ID)
         expected_sec_grp_rule_dict = {
             'security_group_id': t_constants.MOCK_SECURITY_GROUP_ID,
             'direction': 1,
@@ -145,9 +146,29 @@ class TestBaseNeutronNetworkDriver(base.TestCase):
             'port_range_min': 3,
             'port_range_max': 4,
             'ethertype': 5,
-            'remote_ip_prefix': '10.0.0.0/24'}
+            'remote_ip_prefix': '10.0.0.0/24',
+            'remote_group_id': t_constants.MOCK_SECURITY_GROUP_ID}
         self.driver.network_proxy.create_security_group_rule.assert_has_calls(
             [mock.call(**expected_sec_grp_rule_dict)])
+
+    def test__delete_security_group_rule(self):
+        """Test _delete_security_group_rule delegates to proxy"""
+        rule_id = 'rule-123'
+
+        self.driver._delete_security_group_rule(
+            rule_id, ignore_missing=False)
+
+        mock_delete = self.driver.network_proxy.delete_security_group_rule
+        mock_delete.assert_called_once_with(rule_id, ignore_missing=False)
+
+    def test__delete_security_group_rule_ignore_missing(self):
+        """Test _delete_security_group_rule with ignore_missing=True"""
+        rule_id = 'rule-456'
+
+        self.driver._delete_security_group_rule(rule_id, ignore_missing=True)
+
+        mock_delete = self.driver.network_proxy.delete_security_group_rule
+        mock_delete.assert_called_once_with(rule_id, ignore_missing=True)
 
     def test__port_to_vip(self):
         lb = dmh.generate_load_balancer_tree()
