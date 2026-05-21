@@ -311,6 +311,16 @@ class ListenersController(base.BaseController):
         # Validate allowed CIDRs
         allowed_cidrs = listener_dict.get('allowed_cidrs', []) or []
         lb_id = listener_dict.get('load_balancer_id')
+
+        # TODO(gaudenz): For unknown reasons the session cache sometimes
+        # contains a LoadBalancer object with vip=None and
+        # additional_vips = []. As we don't have access to the LoadBalancer
+        # object here, the only option is to expire all objects. Need to
+        # investigate why the LoadBalancer object is incomplete and how to
+        # properly fix this. A similar issue was fixed upstream in commit
+        # 5d9b23c6021ad961fafc17866c6b8ea50f2dc824.
+        lock_session.expire_all()
+
         lb_db = self.repositories.load_balancer.get(
             lock_session, id=lb_id)
         vip_addresses = [lb_db.vip.ip_address]
