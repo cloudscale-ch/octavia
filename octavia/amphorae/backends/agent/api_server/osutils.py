@@ -86,8 +86,10 @@ class BaseOS(object):
 
     @classmethod
     def bring_interface_up(cls, interface, name):
-        cmd = ("ip netns exec {ns} amphora-interface up {params}".format(
-            ns=consts.AMPHORA_NAMESPACE, params=interface))
+        cmd = (
+            "ip netns exec {ns} amphora-interface --debug up {params}".format(
+                ns=consts.AMPHORA_NAMESPACE, params=interface)
+        )
         LOG.debug("Executing: %s", cmd)
         try:
             out = subprocess.check_output(cmd.split(),

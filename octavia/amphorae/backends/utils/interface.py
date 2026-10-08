@@ -79,6 +79,7 @@ class InterfaceController(object):
                 break
             except pyroute2.NetlinkError as e:
                 if e.code == errno.EINVAL and retry_on_invalid_argument:
+                    LOG.info("Error on ipr command: %s", str(e))
                     LOG.debug("Retrying after %f sec.", retry_interval)
                     time.sleep(retry_interval)
                     continue
@@ -277,8 +278,17 @@ class InterfaceController(object):
                    attrs.get('RTA_TABLE'))
             current_routes.append(key)
 
-        # Add new routes
-        for route in interface.routes:
+        # Add new routes, sorted to add specific routes before more generic
+        # ones. This ensures the default route is added last.
+        for route in sorted(
+                interface.routes,
+                key=lambda x: (ipaddress.ip_network(x.get(consts.DST),
+                                                    strict=False).version,
+                               ipaddress.ip_network(x.get(consts.DST),
+                                                    strict=False),
+                               ),
+                reverse=True,
+        ):
             key = (self._normalize_ip_network(route.get(consts.DST)),
                    self._normalize_ip_address(route.get(consts.GATEWAY)),
                    self._normalize_ip_address(route.get(consts.PREFSRC)),
@@ -295,6 +305,9 @@ class InterfaceController(object):
                 # Set raise_on_error to False, possible invalid
                 # (user-defined) routes from the subnet's host_routes will
                 # not break the script.
+                LOG.debug("%s: Address: %s",
+                          interface.name, ipr.addr('dump', socket.AF_INET))
+                LOG.debug("%s: Route: %s", interface.name, ipr.route('show'))
                 self._ipr_command(ipr.route, self.ADD,
                                   retry_on_invalid_argument=True,
                                   raise_on_error=False,

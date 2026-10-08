@@ -5,7 +5,7 @@ Requires=certs-ramfs.service
 Wants=syslog.service
 
 [Service]
-ExecStart=/usr/local/bin/amphora-agent --config-file /etc/octavia/amphora-agent.conf
+ExecStart=/usr/local/bin/amphora-agent --debug --config-file /etc/octavia/amphora-agent.conf
 KillMode=mixed
 Restart=always
 ExecStartPost=/bin/sh -c "echo $MAINPID > /var/run/amphora-agent.pid"
