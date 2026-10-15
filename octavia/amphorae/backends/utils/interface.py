@@ -305,9 +305,9 @@ class InterfaceController(object):
                 # Set raise_on_error to False, possible invalid
                 # (user-defined) routes from the subnet's host_routes will
                 # not break the script.
-                LOG.debug("%s: Address: %s",
-                          interface.name, ipr.addr('dump', socket.AF_INET))
-                LOG.debug("%s: Route: %s", interface.name, ipr.route('show'))
+                for method in (ipr.link, ipr.addr, ipr.route):
+                    for e in method('dump'):
+                        LOG.debug("%s: %s", interface.name, e)
                 self._ipr_command(ipr.route, self.ADD,
                                   retry_on_invalid_argument=True,
                                   raise_on_error=False,

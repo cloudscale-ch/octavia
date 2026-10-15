@@ -169,7 +169,8 @@ class ComputeCreate(BaseComputeTask):
                     "%(amp)s and compute id: %(comp)s",
                     {'amp': amphora_id, 'comp': compute_id})
         try:
-            self.compute.delete(compute_id)
+            # self.compute.delete(compute_id)
+            LOG.info("Would delete server with id: %s", compute_id)
         except Exception:
             LOG.exception("Reverting compute create failed")
 
