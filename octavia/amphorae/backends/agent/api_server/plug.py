@@ -44,6 +44,15 @@ class Plug(object):
             ip_address="127.0.0.1",
             prefixlen=8)
 
+        # Create netns if it does not exist
+        try:
+            pyroute2.netns.create(consts.AMPHORA_NAMESPACE)
+        except FileExistsError:
+            pass
+
+        # bring interface up
+        self._osutils.bring_interface_up('lo', 'loopback')
+
     def render_vips(self, vips):
         rendered_vips = []
         for vip in vips:

@@ -29,7 +29,11 @@ def interfaces_find(interface_controller, name):
     all_interfaces = interface_controller.list()
 
     if name == "all":
-        return all_interfaces.values()
+        # Return "lo" first so it's configured first. This ensures
+        # at least one address of each address family is configured and adding
+        # routes works.
+        return sorted(all_interfaces.values(),
+                      key=lambda x: x == 'lo' and 0 or 1)
 
     if name in all_interfaces:
         return [all_interfaces[name]]
